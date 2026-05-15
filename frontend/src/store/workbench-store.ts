@@ -3,7 +3,7 @@
 import { create } from "zustand";
 import { toast } from "sonner";
 import { createTrendAnalysis, saveDesignPlan } from "@/lib/api/trend";
-import { defaultInput } from "@/lib/mock-data";
+import { showDreamAssistantNotification } from "@/store/assistant-notification-store";
 import type {
   ColorOption,
   MyDesignPlan,
@@ -15,6 +15,13 @@ import type {
 } from "@/lib/types/trend";
 
 type SelectionKey = keyof Omit<UserDesignSelection, "analysis_id">;
+
+const emptyInput: TrendAnalysisInput = {
+  category: "",
+  target_user: "",
+  scene: "",
+  style: "",
+};
 
 interface WorkbenchState {
   input: TrendAnalysisInput;
@@ -117,7 +124,7 @@ function downloadFile(name: string, content: string, type: string) {
 
 export const useWorkbenchStore = create<WorkbenchState>((set, get) => {
   return {
-    input: defaultInput,
+    input: emptyInput,
     analysis: null,
     selection: null,
     myDesignPlan: null,
@@ -129,6 +136,13 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => {
       const { input, abortController } = get();
       if (!input.category || !input.target_user || !input.scene || !input.style) {
         set({ error: "请完整填写品类、目标人群、场景和风格方向。" });
+        showDreamAssistantNotification({
+          type: "warning",
+          title: "输入内容还不完整",
+          message: "请先补齐品类、目标人群、使用场景和风格方向，我再帮你生成爆款趋势报告。",
+          actionText: "我去补充",
+          returnText: "补齐信息后再叫我，我继续待命～",
+        });
         toast.error("请完整填写分析输入");
         return;
       }
@@ -136,6 +150,14 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => {
       abortController?.abort();
       const nextAbortController = new AbortController();
       set({ loading: true, error: null, abortController: nextAbortController });
+      showDreamAssistantNotification({
+        type: "info",
+        title: "趋势分析任务已开始",
+        message: "我正在整理爆款趋势、设计方向和推荐方案，生成完成后会第一时间提醒你。",
+        actionText: "知道了",
+        returnText: "我先回右下角，生成完再来提醒你～",
+      });
+      toast.info("趋势分析已开始");
       try {
         const analysis = await createTrendAnalysis(input, nextAbortController.signal);
         const selection = buildDefaultSelection(analysis);
@@ -146,6 +168,13 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => {
           loading: false,
           abortController: null,
         });
+        showDreamAssistantNotification({
+          type: "success",
+          title: "趋势报告生成完毕",
+          message: "爆款服装趋势分析已完成，可以查看趋势摘要、推荐方案和我的设计方案。",
+          actionText: "我知道了",
+          returnText: "任务提醒完成，我继续待命～",
+        });
         toast.success("趋势分析已生成");
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
@@ -153,6 +182,13 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => {
           return;
         }
         set({ loading: false, abortController: null, error: error instanceof Error ? error.message : "趋势分析失败" });
+        showDreamAssistantNotification({
+          type: "error",
+          title: "趋势分析生成失败",
+          message: error instanceof Error ? error.message : "生成过程中遇到异常，请稍后重试。",
+          actionText: "稍后再试",
+          returnText: "我先回右下角，需要时再叫我～",
+        });
         toast.error("趋势分析失败");
       }
     },
@@ -161,6 +197,13 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => {
       if (!loading) return;
       abortController?.abort();
       set({ loading: false, error: null, abortController: null });
+      showDreamAssistantNotification({
+        type: "info",
+        title: "趋势分析已取消",
+        message: "当前生成任务已停止，已生成的页面内容会继续保留。",
+        actionText: "我知道了",
+        returnText: "我先回右下角，需要灵感随时叫我！",
+      });
       toast.info("已取消生成");
     },
     toggleSelection: (key, id, max = 4) => {

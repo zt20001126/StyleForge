@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
   BarChart3,
@@ -13,17 +15,26 @@ import {
   Palette,
   PenTool,
   Shirt,
+  Sparkles,
   WandSparkles,
+  X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { AppFooter } from "@/components/landing/app-footer";
+import { writeStoredAuthSession } from "@/lib/auth-session";
+import { showDreamAssistantNotification } from "@/store/assistant-notification-store";
+
+const brand = {
+  name: "DM StyleForge",
+  tagline: "AI Fashion Platform",
+};
 
 const navItems = [
-  { label: "趋势分析", href: "#trend" },
-  { label: "AI设计工具", href: "#tools" },
-  { label: "案例方案", href: "#cases" },
+  { label: "爆款服装趋势分析", href: "#trend" },
+  { label: "AI 服装设计工具", href: "#tools" },
+  { label: "爆款案例方案", href: "#cases" },
   { label: "方案库", href: "/gallery" },
 ];
 
@@ -115,29 +126,94 @@ const trendBars = [42, 54, 62, 76, 88, 91, 86];
 const selectedElements = ["冰川白主色", "高领遮阳帽", "背部隐形透气", "UPF 50+"];
 
 export function LandingPage() {
+  const router = useRouter();
+  const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
+
+  function enterWorkbench(mode: "guest" | "user") {
+    const now = new Date().toISOString();
+    writeStoredAuthSession({
+      isAuthenticated: mode === "user",
+      authMode: mode,
+      token: mode === "user" ? "mock-front-end-token" : null,
+      refreshToken: null,
+      user:
+        mode === "user"
+          ? {
+              id: "mock-user",
+              name: "DM Designer",
+              email: "designer@dm-styleforge.demo",
+              phone: "",
+              avatar: "",
+              role: "designer",
+              company: "DM",
+            }
+          : null,
+      guestId: mode === "guest" ? `guest-${Date.now()}` : null,
+      guestStartedAt: mode === "guest" ? now : null,
+      guestLimits: mode === "guest" ? { canSaveToCloud: false, maxTrendAnalyses: 3 } : null,
+      workspaceId: "mock-workspace",
+      plan: mode === "user" ? "trial" : "guest",
+      permissions: {
+        canSaveToCloud: mode === "user",
+        canViewHistory: mode === "user",
+        canExport: true,
+        canGenerate: true,
+      },
+      preferences: {
+        notificationSoundEnabled: true,
+        voiceNotificationEnabled: true,
+      },
+    });
+
+    if (mode === "user") {
+      showDreamAssistantNotification({
+        type: "success",
+        title: "欢迎回来",
+        message: "登录成功，我可以帮你继续生成设计方案啦～",
+        actionText: "开始创作",
+        returnText: "今天也来做爆款灵感吧！",
+        voiceText: "欢迎回来，开始你的爆款创作吧",
+        voiceType: "login",
+      });
+    }
+
+    setIsAuthDialogOpen(false);
+    router.push("/trend-workbench");
+  }
+
   return (
     <main className="relative min-h-screen overflow-hidden">
       <div className="grid-glow pointer-events-none absolute inset-0" />
 
       <nav className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-5 py-5">
         <Link href="/" className="flex items-center gap-3">
-          <div className="flex size-9 items-center justify-center rounded-md border border-cyan-300/40 bg-cyan-300/10 text-sm font-semibold text-primary">
-            SF
+          <div className="relative flex size-10 items-center justify-center overflow-hidden rounded-lg border border-cyan-300/50 bg-gradient-to-br from-cyan-300/20 via-slate-950/50 to-violet-400/25 text-sm font-black tracking-wide text-cyan-100 shadow-[0_0_28px_rgba(34,211,238,0.24)]">
+            <span className="absolute inset-0 bg-[linear-gradient(135deg,transparent_12%,rgba(255,255,255,0.22)_45%,transparent_58%)] opacity-50" />
+            <span className="relative">DM</span>
           </div>
           <div>
-            <div className="text-sm font-semibold">StyleForge</div>
-            <div className="text-xs text-muted-foreground">AI Fashion Platform</div>
+            <div className="text-sm font-semibold">{brand.name}</div>
+            <div className="text-xs text-muted-foreground">{brand.tagline}</div>
           </div>
         </Link>
 
-        <div className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
+        <div className="hidden items-center gap-2 text-sm text-muted-foreground md:flex">
           {navItems.map((item) =>
             item.href.startsWith("#") ? (
-              <a key={item.href} href={item.href} className="transition hover:text-foreground">
+              <a
+                key={item.href}
+                href={item.href}
+                className="rounded-full border border-transparent px-3 py-1.5 transition duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/10 hover:text-foreground hover:shadow-[0_0_22px_rgba(34,211,238,0.16)]"
+              >
                 {item.label}
               </a>
             ) : (
-              <Link key={item.href} href={item.href} className="transition hover:text-foreground">
+              <Link
+                key={item.href}
+                href={item.href}
+                className="rounded-full border border-transparent px-3 py-1.5 transition duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/10 hover:text-foreground hover:shadow-[0_0_22px_rgba(34,211,238,0.16)]"
+              >
                 {item.label}
               </Link>
             ),
@@ -146,11 +222,130 @@ export function LandingPage() {
 
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Button asChild size="sm">
-            <Link href="/trend-workbench">进入工作台</Link>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => {
+              setAuthMode("login");
+              setIsAuthDialogOpen(true);
+            }}
+            className="group relative overflow-hidden bg-gradient-to-r from-cyan-400 via-sky-500 to-violet-500 text-slate-950 shadow-[0_0_28px_rgba(34,211,238,0.42)] transition duration-200 hover:-translate-y-0.5 hover:scale-[1.03] hover:shadow-[0_0_44px_rgba(124,58,237,0.48)] hover:brightness-110"
+          >
+            <span className="absolute inset-y-0 -left-10 w-10 rotate-12 bg-white/35 blur-md transition-all duration-500 group-hover:left-full" />
+            <Sparkles className="size-4" />
+            进入工作台
+            <ArrowRight className="size-4" />
           </Button>
         </div>
       </nav>
+
+      <AnimatePresence>
+        {isAuthDialogOpen && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 backdrop-blur-md"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) {
+                setIsAuthDialogOpen(false);
+              }
+            }}
+          >
+            <motion.section
+              role="dialog"
+              aria-modal="true"
+              aria-label="进入 DM StyleForge 工作台"
+              className="relative w-full max-w-md overflow-hidden rounded-xl border border-cyan-300/25 bg-card text-card-foreground shadow-2xl shadow-cyan-950/50"
+              initial={{ opacity: 0, y: 18, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.96 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(34,211,238,0.22),transparent_34%),radial-gradient(circle_at_82%_12%,rgba(167,139,250,0.2),transparent_32%)]" />
+              <div className="relative p-5">
+                <div className="mb-5 flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex size-11 items-center justify-center rounded-lg border border-cyan-300/40 bg-gradient-to-br from-cyan-300/25 to-violet-400/25 text-sm font-black text-cyan-100 shadow-[0_0_28px_rgba(34,211,238,0.28)]">
+                      DM
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-semibold">进入 {brand.name} 工作台</h2>
+                      <p className="mt-1 text-xs text-muted-foreground">登录后可保存方案；也可以先以游客身份体验。</p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-8 shrink-0"
+                    onClick={() => setIsAuthDialogOpen(false)}
+                    aria-label="关闭登录弹窗"
+                  >
+                    <X className="size-4" />
+                  </Button>
+                </div>
+
+                <div className="mb-4 grid grid-cols-2 rounded-lg border bg-background/55 p-1">
+                  {(["login", "register"] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setAuthMode(mode)}
+                      className={`rounded-md px-3 py-2 text-sm font-medium transition ${
+                        authMode === mode
+                          ? "bg-primary text-primary-foreground shadow-lg shadow-cyan-500/20"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }`}
+                    >
+                      {mode === "login" ? "登录" : "注册"}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="space-y-3">
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs text-muted-foreground">手机号 / 邮箱</span>
+                    <input
+                      type="text"
+                      placeholder="designer@dm-styleforge.com"
+                      className="h-10 w-full rounded-md border bg-background px-3 text-sm outline-none transition placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary/70"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs text-muted-foreground">
+                      {authMode === "login" ? "密码 / 验证码" : "设置密码 / 获取验证码"}
+                    </span>
+                    <input
+                      type="password"
+                      placeholder={authMode === "login" ? "输入密码或验证码" : "设置登录密码"}
+                      className="h-10 w-full rounded-md border bg-background px-3 text-sm outline-none transition placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary/70"
+                    />
+                  </label>
+                </div>
+
+                <div className="mt-5 space-y-3">
+                  <Button
+                    type="button"
+                    className="w-full bg-gradient-to-r from-cyan-400 via-sky-500 to-violet-500 text-slate-950 shadow-[0_0_30px_rgba(34,211,238,0.36)] hover:brightness-110"
+                    onClick={() => enterWorkbench("user")}
+                  >
+                    {authMode === "login" ? "登录并进入" : "注册并进入"}
+                    <ArrowRight className="size-4" />
+                  </Button>
+                  <Button type="button" variant="outline" className="w-full" onClick={() => enterWorkbench("guest")}>
+                    暂不登录，先进入体验
+                  </Button>
+                </div>
+
+                <p className="mt-4 text-center text-xs leading-5 text-muted-foreground">
+                  当前为前端演示登录，不会发送真实账号请求。后续可接入 token、用户信息、游客权限与工作台权限。
+                </p>
+              </div>
+            </motion.section>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <section
         id="trend"

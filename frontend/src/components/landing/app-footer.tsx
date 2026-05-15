@@ -4,15 +4,15 @@ import { ChevronDown, Globe2, Instagram, Mail, MessageCircle, Music2 } from "luc
 const footerGroups = [
   {
     title: "创意工具",
-    links: ["趋势分析", "以文生款", "以款生款", "图案工艺"],
+    links: ["爆款趋势分析", "以文生款", "以款生款", "图案工艺"],
   },
   {
     title: "AI工作室",
     links: ["图像生成", "视频生成", "换模特背景", "服装配色"],
   },
   {
-    title: "3D精准设计",
-    links: ["服装上身", "版型预览", "材质模拟", "系列企划"],
+    title: "设计生产力",
+    links: ["服装上身", "商拍生成", "系列企划", "款式延展"],
   },
   {
     title: "支持 & 下载",
@@ -32,11 +32,12 @@ export function AppFooter() {
       <div className="mx-auto grid max-w-7xl gap-12 px-5 py-14 lg:grid-cols-[0.9fr_1.5fr] lg:py-16">
         <div className="flex flex-col gap-7">
           <Link href="/" className="flex w-fit items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-md border border-cyan-200 bg-cyan-50 text-sm font-semibold text-cyan-700">
-              SF
+            <div className="relative flex size-10 items-center justify-center overflow-hidden rounded-lg border border-cyan-200 bg-gradient-to-br from-cyan-50 via-white to-violet-100 text-sm font-black tracking-wide text-cyan-700 shadow-[0_0_24px_rgba(8,145,178,0.18)]">
+              <span className="absolute inset-0 bg-[linear-gradient(135deg,transparent_12%,rgba(8,145,178,0.18)_45%,transparent_58%)]" />
+              <span className="relative">DM</span>
             </div>
             <div>
-              <div className="text-base font-semibold">StyleForge</div>
+              <div className="text-base font-semibold">DM StyleForge</div>
               <div className="text-xs text-slate-500">AI Fashion Platform</div>
             </div>
           </Link>
@@ -74,7 +75,7 @@ export function AppFooter() {
           </div>
 
           <div className="space-y-2 text-xs leading-5 text-slate-500">
-            <p>Copyright © 2026 StyleForge. All rights reserved.</p>
+            <p>Copyright © 2026 DM StyleForge. All rights reserved.</p>
             <p>ICP备案号：沪ICP备2026000000号-1</p>
           </div>
         </div>

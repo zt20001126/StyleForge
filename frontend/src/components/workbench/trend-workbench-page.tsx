@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Heart, Loader2, Square, WandSparkles } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,31 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { TrendAnalysisResultView } from "@/components/workbench/trend-analysis-result-view";
 import { useWorkbenchStore } from "@/store/workbench-store";
+
+const inputFields = [
+  {
+    key: "category",
+    label: "品类",
+    examples: ["女款防晒衣", "男款冲锋衣", "通勤衬衫", "轻量风衣"],
+  },
+  {
+    key: "target_user",
+    label: "目标人群",
+    examples: ["18-30岁城市通勤女性", "轻户外运动人群", "高客单价通勤女性", "周末短途旅行用户"],
+  },
+  {
+    key: "scene",
+    label: "使用场景",
+    examples: ["通勤", "轻户外", "旅行 / 周末短途", "办公室到户外切换"],
+  },
+  {
+    key: "style",
+    label: "风格方向",
+    examples: ["轻机能", "极简科技风", "高级运动风", "冷感未来风"],
+  },
+] as const;
+
+type InputFieldKey = (typeof inputFields)[number]["key"];
 
 export function TrendWorkbenchPage() {
   const {
@@ -27,6 +53,25 @@ export function TrendWorkbenchPage() {
     exportMarkdown,
   } = useWorkbenchStore();
   const trendResult = analysis?.result ?? null;
+  const [placeholderIndexes, setPlaceholderIndexes] = useState<Record<InputFieldKey, number>>({
+    category: 0,
+    target_user: 0,
+    scene: 0,
+    style: 0,
+  });
+
+  useEffect(() => {
+    const placeholderTimer = window.setInterval(() => {
+      setPlaceholderIndexes((currentIndexes) => ({
+        category: (currentIndexes.category + 1) % inputFields[0].examples.length,
+        target_user: (currentIndexes.target_user + 1) % inputFields[1].examples.length,
+        scene: (currentIndexes.scene + 1) % inputFields[2].examples.length,
+        style: (currentIndexes.style + 1) % inputFields[3].examples.length,
+      }));
+    }, 6000);
+
+    return () => window.clearInterval(placeholderTimer);
+  }, []);
 
   return (
     <div className="mx-auto grid max-w-7xl gap-6 p-4 lg:grid-cols-[1fr_380px] lg:p-6">
@@ -43,19 +88,14 @@ export function TrendWorkbenchPage() {
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
-            {[
-              ["category", "品类", "例如：女款防晒夹克"],
-              ["target_user", "目标人群", "例如：18-30 岁城市通勤女性"],
-              ["scene", "使用场景", "例如：通勤 / 轻户外"],
-              ["style", "风格方向", "例如：轻机能、高级运动"],
-            ].map(([key, label, placeholder]) => (
-              <label key={key} className="space-y-2">
-                <span className="text-sm text-muted-foreground">{label}</span>
+            {inputFields.map((field) => (
+              <label key={field.key} className="space-y-2">
+                <span className="text-sm text-muted-foreground">{field.label}</span>
                 <input
                   className="h-11 w-full rounded-md border bg-background/60 px-3 text-sm outline-none transition focus:border-primary"
-                  value={input[key as keyof typeof input]}
-                  placeholder={placeholder}
-                  onChange={(event) => setInput({ ...input, [key]: event.target.value })}
+                  value={input[field.key]}
+                  placeholder={`例如：${field.examples[placeholderIndexes[field.key]]}`}
+                  onChange={(event) => setInput({ ...input, [field.key]: event.target.value })}
                 />
               </label>
             ))}
@@ -90,7 +130,7 @@ export function TrendWorkbenchPage() {
         )}
       </div>
 
-      <aside className="lg:sticky lg:top-6 lg:self-start">
+      <aside className="lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:self-start lg:overflow-auto">
         <Card className="glass-panel">
           <CardHeader>
             <div className="flex items-center justify-between gap-4">
