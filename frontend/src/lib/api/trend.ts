@@ -64,9 +64,28 @@ function toTrendAnalysisSummary(analysis: TrendAnalysisResponse): TrendAnalysisS
   };
 }
 
-export async function createTrendAnalysis(input: TrendAnalysisInput): Promise<TrendAnalysisResponse> {
+function waitForMockResponse(signal?: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException("Request aborted", "AbortError"));
+      return;
+    }
+
+    const timeoutId = setTimeout(resolve, 450);
+    signal?.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(timeoutId);
+        reject(new DOMException("Request aborted", "AbortError"));
+      },
+      { once: true },
+    );
+  });
+}
+
+export async function createTrendAnalysis(input: TrendAnalysisInput, signal?: AbortSignal): Promise<TrendAnalysisResponse> {
   if (USE_MOCKS) {
-    await new Promise((resolve) => setTimeout(resolve, 450));
+    await waitForMockResponse(signal);
     return {
       ...mockAnalysis,
       input,
@@ -75,6 +94,7 @@ export async function createTrendAnalysis(input: TrendAnalysisInput): Promise<Tr
 
   return request<TrendAnalysisResponse>("/api/trend-analyses", {
     method: "POST",
+    signal,
     body: JSON.stringify(input),
   });
 }
@@ -86,6 +106,17 @@ export async function listTrendAnalyses(): Promise<TrendAnalysisSummary[]> {
 
   const response = await request<PaginatedTrendAnalyses>("/api/trend-analyses?page=1&page_size=20");
   return response.list;
+}
+
+export async function getTrendAnalysis(analysisId: string): Promise<TrendAnalysisResponse> {
+  if (USE_MOCKS) {
+    return {
+      ...mockAnalysis,
+      analysis_id: analysisId || mockAnalysis.analysis_id,
+    };
+  }
+
+  return request<TrendAnalysisResponse>(`/api/trend-analyses/${encodeURIComponent(analysisId)}`);
 }
 
 export async function generateDesignPlan(selection: UserDesignSelection): Promise<MyDesignPlan> {

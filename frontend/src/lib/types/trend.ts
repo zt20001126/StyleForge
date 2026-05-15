@@ -58,7 +58,8 @@ export interface TrendAnalysisResponse {
   analysis_id: string;
   status: "processing" | "success" | "failed";
   input: TrendAnalysisInput;
-  result: TrendAnalysisResult;
+  result: TrendAnalysisResult | null;
+  error_message?: string | null;
   created_at?: string;
 }
 

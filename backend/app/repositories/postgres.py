@@ -139,13 +139,13 @@ class PostgresRepository:
     def create_trend_analysis(
         self,
         input_data: TrendAnalysisInput,
-        result: TrendAnalysisResult,
+        result: TrendAnalysisResult | None,
         status: Literal["processing", "success", "failed"] = "success",
         error_message: str | None = None,
         analysis_prompt: str | None = None,
         raw_response: str | None = None,
     ) -> TrendAnalysisDetail:
-        result_json = result.model_dump(mode="json")
+        result_json = result.model_dump(mode="json") if result is not None else None
         values = {
             "category": input_data.category,
             "target_user": input_data.target_user,
@@ -154,7 +154,7 @@ class PostgresRepository:
             "analysis_prompt": analysis_prompt or "",
             "raw_response": raw_response,
             "result_json": result_json,
-            "base_prompt": result.base_prompt,
+            "base_prompt": result.base_prompt if result is not None else None,
             "status": status,
             "error_message": error_message,
         }
@@ -272,7 +272,7 @@ def _trend_analysis_from_row(row: RowMapping) -> TrendAnalysisDetail:
         scene=row["scene"],
         style=row["style"],
     )
-    result = TrendAnalysisResult.model_validate(row["result_json"])
+    result = TrendAnalysisResult.model_validate(row["result_json"]) if row["result_json"] is not None else None
     return TrendAnalysisDetail(
         analysis_id=str(row["id"]),
         status=row["status"],

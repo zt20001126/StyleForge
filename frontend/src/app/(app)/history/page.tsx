@@ -1,5 +1,5 @@
-import { HistoryPage } from "@/components/dashboard/history-page";
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <HistoryPage />;
+  redirect("/trend-reports");
 }

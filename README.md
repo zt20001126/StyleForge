@@ -574,3 +574,30 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 | --- | --- |
 | `NEXT_PUBLIC_USE_MOCKS` | 是否使用前端 mock 数据 |
 | `NEXT_PUBLIC_API_BASE_URL` | 后端 API 地址 |
+
+## Configuration and Secret Management
+
+StyleForge uses `backend/app/core/config.py` as the single backend configuration entrypoint. Backend code should read settings from `get_settings()` or receive a `Settings` object from its caller; avoid direct `os.getenv()` calls in services, routes, repositories, or storage clients.
+
+Configuration priority:
+
+1. Production and CI/CD secrets injected as environment variables or platform secrets.
+2. Local backend values in `backend/.env`.
+3. Safe examples in `backend/.env.example` and `frontend/.env.example`.
+4. Docker Compose local infrastructure defaults in the root `.env.example`.
+
+Backend-only secrets:
+
+- `OPENAI_API_KEY`, `ARK_API_KEY`, `DASHSCOPE_API_KEY`
+- `DATABASE_URL`, `REDIS_URL`
+- `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`
+- `OSS_ACCESS_KEY_ID`, `OSS_ACCESS_KEY_SECRET`
+
+Frontend-safe variables:
+
+- `NEXT_PUBLIC_API_BASE_URL`
+- `NEXT_PUBLIC_USE_MOCKS`
+
+Never add provider API keys, database URLs, Redis URLs, MinIO secrets, or OSS secrets to frontend environment variables. Every `NEXT_PUBLIC_*` variable is visible in the browser bundle.
+
+For real model calls, set `USE_MOCK_AI=false` and choose `AI_PROVIDER=openai`, `AI_PROVIDER=ark`, or `AI_PROVIDER=dashscope`. The backend then selects the provider-specific base URL, model, and API key through the central settings object.

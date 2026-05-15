@@ -92,7 +92,7 @@ AI_MODEL=gpt-4o-mini
 
 1. 用户进入“服装爆款趋势分析”页面。
 2. 用户填写品类、目标人群、使用场景、风格方向。
-3. 前端调用 `POST /api/trend-analysis`。
+3. 前端调用 `POST /api/trend-analyses`。
 4. 后端校验请求参数。
 5. 后端根据用户输入组装 Prompt。
 6. 后端创建数据库记录，状态为 `processing`。
@@ -112,7 +112,7 @@ AI_MODEL=gpt-4o-mini
 请求路径：
 
 ```http
-POST /api/trend-analysis
+POST /api/trend-analyses
 ```
 
 请求参数：
@@ -189,7 +189,7 @@ POST /api/trend-analysis
 请求路径：
 
 ```http
-GET /api/trend-analysis/{id}
+GET /api/trend-analyses/{id}
 ```
 
 成功返回示例：
@@ -222,7 +222,7 @@ GET /api/trend-analysis/{id}
 请求路径：
 
 ```http
-GET /api/trend-analysis
+GET /api/trend-analyses
 ```
 
 可选查询参数：
@@ -644,9 +644,9 @@ project-root/
 4. 实现 Prompt 组装函数
 5. 实现 AI 大模型调用函数
 6. 实现 JSON 解析与校验函数
-7. 实现 `POST /api/trend-analysis`
-8. 实现 `GET /api/trend-analysis/{id}`
-9. 实现 `GET /api/trend-analysis`
+7. 实现 `POST /api/trend-analyses`
+8. 实现 `GET /api/trend-analyses/{id}`
+9. 实现 `GET /api/trend-analyses`
 10. 搭建前端页面
 11. 实现前端表单提交
 12. 实现分析结果展示
@@ -731,7 +731,7 @@ project-root/
 请求：
 
 ```http
-GET /api/trend-analysis/1
+GET /api/trend-analyses/1
 ```
 
 预期：
@@ -744,7 +744,7 @@ GET /api/trend-analysis/1
 请求：
 
 ```http
-GET /api/trend-analysis?page=1&page_size=20
+GET /api/trend-analyses?page=1&page_size=20
 ```
 
 预期：

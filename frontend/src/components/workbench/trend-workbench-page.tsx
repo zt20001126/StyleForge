@@ -1,55 +1,47 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
-import { Download, Heart, Loader2, WandSparkles } from "lucide-react";
-import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Heart, Loader2, Square, WandSparkles } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { cn } from "@/lib/utils";
+import { TrendAnalysisResultView } from "@/components/workbench/trend-analysis-result-view";
 import { useWorkbenchStore } from "@/store/workbench-store";
-import type { ColorOption, RecommendedDirection, TrendOption } from "@/lib/types/trend";
-
-const chartData = [
-  { month: "Jan", value: 42 },
-  { month: "Feb", value: 54 },
-  { month: "Mar", value: 63 },
-  { month: "Apr", value: 76 },
-  { month: "May", value: 91 },
-  { month: "Jun", value: 86 },
-];
-
-const subscribe = () => () => {};
-const getClientSnapshot = () => true;
-const getServerSnapshot = () => false;
 
 export function TrendWorkbenchPage() {
-  const { input, setInput, analysis, myDesignPlan, loading, error, submitAnalysis, saveCurrentPlan, exportJson, exportMarkdown } =
-    useWorkbenchStore();
-  const mounted = useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot);
+  const {
+    input,
+    setInput,
+    analysis,
+    selection,
+    myDesignPlan,
+    loading,
+    error,
+    submitAnalysis,
+    cancelAnalysis,
+    toggleSelection,
+    applyRecommendedDirection,
+    saveCurrentPlan,
+    exportJson,
+    exportMarkdown,
+  } = useWorkbenchStore();
+  const trendResult = analysis?.result ?? null;
 
   return (
     <div className="mx-auto grid max-w-7xl gap-6 p-4 lg:grid-cols-[1fr_380px] lg:p-6">
       <div className="space-y-6">
         <section className="glass-panel rounded-xl p-5">
-          <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+          <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="text-sm text-muted-foreground">Trend Workbench</p>
-              <h1 className="text-2xl font-semibold">AI 爆款趋势分析工作台</h1>
+              <h1 className="text-2xl font-semibold">爆款服装趋势分析工作台</h1>
             </div>
-            <Badge>Next.js + shadcn/ui style</Badge>
+            <Button asChild variant="outline">
+              <Link href="/trend-reports">查看历史趋势报告</Link>
+            </Button>
           </div>
+
           <div className="grid gap-3 md:grid-cols-2">
             {[
               ["category", "品类", "例如：女款防晒夹克"],
@@ -68,83 +60,37 @@ export function TrendWorkbenchPage() {
               </label>
             ))}
           </div>
+
           {error && <div className="mt-4 rounded-md border border-rose-400/30 bg-rose-400/10 p-3 text-sm text-rose-200">{error}</div>}
+
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
             <Button onClick={submitAnalysis} disabled={loading}>
               {loading ? <Loader2 className="size-4 animate-spin" /> : <WandSparkles className="size-4" />}
               生成趋势分析
             </Button>
-            <Button variant="outline" onClick={exportMarkdown} disabled={!myDesignPlan}>
-              <Download className="size-4" />
-              导出 Markdown
-            </Button>
+            {loading && (
+              <Button variant="outline" onClick={cancelAnalysis}>
+                <Square className="size-4" />
+                取消生成
+              </Button>
+            )}
           </div>
         </section>
 
-        {analysis && (
-          <>
-            <section className="grid gap-4 md:grid-cols-3">
-              <MetricCard label="趋势摘要" value="6 维" text={analysis.result.summary} />
-              <MetricCard label="机会" value="High" text={analysis.result.opportunity} tone="success" />
-              <MetricCard label="风险" value="Watch" text={analysis.result.risk} tone="warning" />
-            </section>
+        {loading && <GenerationStatus />}
 
-            <section className="grid gap-4 lg:grid-cols-5">
-              <Card className="glass-panel lg:col-span-3">
-                <CardHeader>
-                  <CardTitle>趋势热度走势</CardTitle>
-                </CardHeader>
-                <CardContent className="h-64">
-                  {mounted ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={chartData}>
-                        <defs>
-                          <linearGradient id="trend" x1="0" x2="0" y1="0" y2="1">
-                            <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.55} />
-                            <stop offset="95%" stopColor="#22d3ee" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,.18)" />
-                        <XAxis dataKey="month" stroke="#94a3b8" />
-                        <YAxis stroke="#94a3b8" />
-                        <Tooltip contentStyle={{ background: "#0b1220", border: "1px solid rgba(148,163,184,.24)" }} />
-                        <Area type="monotone" dataKey="value" stroke="#22d3ee" fill="url(#trend)" />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="h-full rounded-lg bg-muted/40" />
-                  )}
-                </CardContent>
-              </Card>
-              <Card className="glass-panel lg:col-span-2">
-                <CardHeader>
-                  <CardTitle>卖点评分</CardTitle>
-                </CardHeader>
-                <CardContent className="h-64">
-                  {mounted ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={analysis.result.selling_points.map((item) => ({ name: item.name, score: item.score }))}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,.18)" />
-                        <XAxis dataKey="name" hide />
-                        <YAxis stroke="#94a3b8" />
-                        <Tooltip contentStyle={{ background: "#0b1220", border: "1px solid rgba(148,163,184,.24)" }} />
-                        <Bar dataKey="score" fill="#a78bfa" radius={[6, 6, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="h-full rounded-lg bg-muted/40" />
-                  )}
-                </CardContent>
-              </Card>
-            </section>
-
-            <TrendPool />
-            <RecommendedDirectionCards directions={analysis.result.recommended_directions} />
-          </>
+        {trendResult && (
+          <TrendAnalysisResultView
+            result={trendResult}
+            selection={selection}
+            onToggleSelection={toggleSelection}
+            onApplyDirection={applyRecommendedDirection}
+            onExport={exportMarkdown}
+          />
         )}
       </div>
 
-      <aside className="lg:sticky lg:top-22 lg:self-start">
+      <aside className="lg:sticky lg:top-6 lg:self-start">
         <Card className="glass-panel">
           <CardHeader>
             <div className="flex items-center justify-between gap-4">
@@ -166,10 +112,6 @@ export function TrendWorkbenchPage() {
                   <Progress value={myDesignPlan.popularity_score} />
                 </div>
                 <p className="text-sm leading-6 text-muted-foreground">{myDesignPlan.design_summary}</p>
-                <div className="rounded-lg border bg-background/50 p-3">
-                  <div className="mb-2 text-xs uppercase text-muted-foreground">AI Prompt</div>
-                  <p className="text-sm leading-6">{myDesignPlan.ai_prompt}</p>
-                </div>
                 {myDesignPlan.warnings.length > 0 && (
                   <div className="rounded-lg border border-amber-400/30 bg-amber-400/10 p-3 text-sm text-amber-200">
                     {myDesignPlan.warnings.join(" ")}
@@ -195,154 +137,15 @@ export function TrendWorkbenchPage() {
   );
 }
 
-function MetricCard({ label, value, text, tone = "default" }: { label: string; value: string; text: string; tone?: "default" | "success" | "warning" }) {
+function GenerationStatus() {
   return (
-    <Card className="glass-panel">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">{label}</p>
-          <Badge variant={tone === "success" ? "success" : tone === "warning" ? "warning" : "default"}>{value}</Badge>
+    <section className="glass-panel rounded-xl border border-primary/20 p-4">
+      <div className="flex items-start gap-3">
+        <Loader2 className="mt-1 size-4 animate-spin text-primary" />
+        <div className="space-y-1">
+          <p className="font-medium">正在生成爆款趋势报告...</p>
+          <p className="text-sm text-muted-foreground">预计需要等待一段时间，可点击取消停止生成。已生成的结果会继续保留。</p>
         </div>
-      </CardHeader>
-      <CardContent className="text-sm leading-6 text-muted-foreground">{text}</CardContent>
-    </Card>
-  );
-}
-
-function TrendPool() {
-  const { analysis } = useWorkbenchStore();
-  if (!analysis) return null;
-  const result = analysis.result;
-
-  return (
-    <section className="space-y-4">
-      <div>
-        <p className="text-sm text-muted-foreground">Trend Pool</p>
-        <h2 className="text-xl font-semibold">可视化趋势池</h2>
-      </div>
-      <TrendOptionSection title="风格方向" field="selected_style_ids" items={result.style_directions} max={2} />
-      <TrendOptionSection title="版型廓形" field="selected_silhouette_ids" items={result.silhouettes} max={2} />
-      <TrendOptionSection title="核心结构" field="selected_structure_ids" items={result.core_structures} max={4} />
-      <ColorPaletteSection items={result.color_palette} />
-      <TrendOptionSection title="面料趋势" field="selected_fabric_ids" items={result.fabric_trends} max={3} />
-      <TrendOptionSection title="卖点表达" field="selected_selling_point_ids" items={result.selling_points} max={4} />
-    </section>
-  );
-}
-
-function TrendOptionSection({
-  title,
-  field,
-  items,
-  max,
-}: {
-  title: string;
-  field:
-    | "selected_style_ids"
-    | "selected_silhouette_ids"
-    | "selected_structure_ids"
-    | "selected_fabric_ids"
-    | "selected_selling_point_ids";
-  items: TrendOption[];
-  max: number;
-}) {
-  const { selection, toggleSelection } = useWorkbenchStore();
-  return (
-    <Card className="glass-panel">
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="grid gap-3 md:grid-cols-2">
-        {items.map((item) => {
-          const selected = selection?.[field].includes(item.id);
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => toggleSelection(field, item.id, max)}
-              className={cn(
-                "rounded-lg border bg-background/45 p-4 text-left transition hover:border-primary/60",
-                selected && "border-primary bg-primary/10 shadow-lg shadow-cyan-500/10",
-              )}
-            >
-              <div className="mb-3 flex items-start justify-between gap-3">
-                <div>
-                  <div className="font-medium">{item.name}</div>
-                  <div className="mt-1 text-sm text-muted-foreground">{item.description}</div>
-                </div>
-                <Badge>{item.score}</Badge>
-              </div>
-              <p className="mb-3 text-xs leading-5 text-muted-foreground">{item.reason}</p>
-              <div className="flex flex-wrap gap-2">
-                {item.tags?.map((tag) => <Badge key={tag} variant="secondary">{tag}</Badge>)}
-              </div>
-            </button>
-          );
-        })}
-      </CardContent>
-    </Card>
-  );
-}
-
-function ColorPaletteSection({ items }: { items: ColorOption[] }) {
-  const { selection, toggleSelection } = useWorkbenchStore();
-  return (
-    <Card className="glass-panel">
-      <CardHeader>
-        <CardTitle>颜色矩阵</CardTitle>
-      </CardHeader>
-      <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {items.map((item) => {
-          const selected = selection?.selected_color_ids.includes(item.id);
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => toggleSelection("selected_color_ids", item.id, 3)}
-              className={cn(
-                "rounded-lg border bg-background/45 p-3 text-left transition hover:border-primary/60",
-                selected && "border-primary bg-primary/10",
-              )}
-            >
-              <div className="mb-3 h-16 rounded-md border" style={{ backgroundColor: item.hex }} />
-              <div className="flex items-center justify-between">
-                <span className="font-medium">{item.name}</span>
-                <Badge>{item.score}</Badge>
-              </div>
-              <p className="mt-2 text-xs text-muted-foreground">{item.role} / {item.hex}</p>
-            </button>
-          );
-        })}
-      </CardContent>
-    </Card>
-  );
-}
-
-function RecommendedDirectionCards({ directions }: { directions: RecommendedDirection[] }) {
-  const { applyRecommendedDirection } = useWorkbenchStore();
-  return (
-    <section className="space-y-4">
-      <div>
-        <p className="text-sm text-muted-foreground">AI Recommended Directions</p>
-        <h2 className="text-xl font-semibold">推荐方案</h2>
-      </div>
-      <div className="grid gap-4 md:grid-cols-3">
-        {directions.map((direction) => (
-          <Card key={direction.id} className="glass-panel">
-            <CardHeader>
-              <div className="flex items-start justify-between gap-3">
-                <CardTitle className="leading-6">{direction.name}</CardTitle>
-                <Badge variant={direction.cost_complexity === "high" ? "warning" : "success"}>{direction.popularity_score}</Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm leading-6 text-muted-foreground">{direction.design_summary}</p>
-              <Button className="w-full" variant="outline" onClick={() => applyRecommendedDirection(direction)}>
-                应用方案
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
       </div>
     </section>
   );

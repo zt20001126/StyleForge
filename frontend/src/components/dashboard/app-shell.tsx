@@ -20,6 +20,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const navItems = [
   { href: "/trend-workbench", label: "趋势工作台", icon: LayoutDashboard },
+  { href: "/trend-reports", label: "历史趋势报告", icon: History },
   { href: "/generate", label: "AI 生成", icon: Sparkles },
   { href: "/gallery", label: "方案库", icon: GalleryVerticalEnd },
   { href: "/generate/text-to-style", label: "以文生款", icon: FileText },
@@ -28,7 +29,6 @@ const navItems = [
   { href: "/generate/commercial-shoot", label: "换模特背景", icon: ScanFace },
   { href: "/generate/recolor", label: "服装配色", icon: Palette },
   { href: "/generate/try-on", label: "服装上身", icon: UserRound },
-  { href: "/history", label: "历史", icon: History },
   { href: "/settings", label: "设置", icon: Settings },
 ];
 

@@ -3,7 +3,7 @@
 import { create } from "zustand";
 import { toast } from "sonner";
 import { createTrendAnalysis, saveDesignPlan } from "@/lib/api/trend";
-import { defaultInput, mockAnalysis } from "@/lib/mock-data";
+import { defaultInput } from "@/lib/mock-data";
 import type {
   ColorOption,
   MyDesignPlan,
@@ -23,8 +23,10 @@ interface WorkbenchState {
   myDesignPlan: MyDesignPlan | null;
   loading: boolean;
   error: string | null;
+  abortController: AbortController | null;
   setInput: (input: TrendAnalysisInput) => void;
   submitAnalysis: () => Promise<void>;
+  cancelAnalysis: () => void;
   toggleSelection: (key: SelectionKey, id: string, max?: number) => void;
   applyRecommendedDirection: (direction: RecommendedDirection) => void;
   saveCurrentPlan: () => Promise<void>;
@@ -38,6 +40,9 @@ function topIds<T extends TrendOption | ColorOption>(items: T[], count: number) 
 
 function buildDefaultSelection(analysis: TrendAnalysisResponse): UserDesignSelection {
   const result = analysis.result;
+  if (!result) {
+    throw new Error("Trend analysis result is not available.");
+  }
   return {
     analysis_id: analysis.analysis_id,
     selected_style_ids: topIds(result.style_directions, 1),
@@ -51,6 +56,9 @@ function buildDefaultSelection(analysis: TrendAnalysisResponse): UserDesignSelec
 
 function getSelectedNames(analysis: TrendAnalysisResponse, selection: UserDesignSelection) {
   const result = analysis.result;
+  if (!result) {
+    throw new Error("Trend analysis result is not available.");
+  }
   const byId = new Map<string, { name: string; score: number }>();
   [
     ...result.style_directions,
@@ -74,10 +82,14 @@ function getSelectedNames(analysis: TrendAnalysisResponse, selection: UserDesign
 }
 
 function buildPlan(analysis: TrendAnalysisResponse, selection: UserDesignSelection): MyDesignPlan {
+  const result = analysis.result;
+  if (!result) {
+    throw new Error("Trend analysis result is not available.");
+  }
   const selected = getSelectedNames(analysis, selection);
   const names = selected.map((item) => item.name);
   const popularity = Math.round(selected.reduce((sum, item) => sum + item.score, 0) / Math.max(1, selected.length));
-  const direction = analysis.result.recommended_directions.find((item) =>
+  const direction = result.recommended_directions.find((item) =>
     item.style_ids.some((id) => selection.selected_style_ids.includes(id)),
   );
 
@@ -87,7 +99,7 @@ function buildPlan(analysis: TrendAnalysisResponse, selection: UserDesignSelecti
     style_description: `${analysis.input.style} 方向，适用于 ${analysis.input.scene}，强调功能、造型和商业转化的平衡。`,
     recommended_direction: direction?.name ?? "自定义趋势组合方案",
     popularity_score: popularity,
-    ai_prompt: `${analysis.result.base_prompt}，${names.join("，")}，高级成衣设计稿，科技感面料，清晰产品结构。`,
+    ai_prompt: `${result.base_prompt}，${names.join("，")}，高级成衣设计稿，科技感面料，清晰产品结构。`,
     selected_items: selection,
     warnings: popularity < 82 ? ["当前组合爆款指数偏保守，可增加高分卖点或更明确的主色。"] : [],
   };
@@ -104,38 +116,52 @@ function downloadFile(name: string, content: string, type: string) {
 }
 
 export const useWorkbenchStore = create<WorkbenchState>((set, get) => {
-  const initialSelection = buildDefaultSelection(mockAnalysis);
   return {
     input: defaultInput,
-    analysis: mockAnalysis,
-    selection: initialSelection,
-    myDesignPlan: buildPlan(mockAnalysis, initialSelection),
+    analysis: null,
+    selection: null,
+    myDesignPlan: null,
     loading: false,
     error: null,
+    abortController: null,
     setInput: (input) => set({ input }),
     submitAnalysis: async () => {
-      const { input } = get();
+      const { input, abortController } = get();
       if (!input.category || !input.target_user || !input.scene || !input.style) {
         set({ error: "请完整填写品类、目标人群、场景和风格方向。" });
         toast.error("请完整填写分析输入");
         return;
       }
 
-      set({ loading: true, error: null });
+      abortController?.abort();
+      const nextAbortController = new AbortController();
+      set({ loading: true, error: null, abortController: nextAbortController });
       try {
-        const analysis = await createTrendAnalysis(input);
+        const analysis = await createTrendAnalysis(input, nextAbortController.signal);
         const selection = buildDefaultSelection(analysis);
         set({
           analysis,
           selection,
           myDesignPlan: buildPlan(analysis, selection),
           loading: false,
+          abortController: null,
         });
         toast.success("趋势分析已生成");
       } catch (error) {
-        set({ loading: false, error: error instanceof Error ? error.message : "趋势分析失败" });
+        if (error instanceof DOMException && error.name === "AbortError") {
+          set({ loading: false, error: null, abortController: null });
+          return;
+        }
+        set({ loading: false, abortController: null, error: error instanceof Error ? error.message : "趋势分析失败" });
         toast.error("趋势分析失败");
       }
+    },
+    cancelAnalysis: () => {
+      const { abortController, loading } = get();
+      if (!loading) return;
+      abortController?.abort();
+      set({ loading: false, error: null, abortController: null });
+      toast.info("已取消生成");
     },
     toggleSelection: (key, id, max = 4) => {
       const { analysis, selection } = get();
@@ -151,11 +177,11 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => {
       if (!analysis) return;
       const selection: UserDesignSelection = {
         analysis_id: analysis.analysis_id,
-        selected_style_ids: direction.style_ids,
-        selected_silhouette_ids: direction.silhouette_ids,
+        selected_style_ids: direction.style_ids.slice(0, 1),
+        selected_silhouette_ids: direction.silhouette_ids.slice(0, 1),
         selected_structure_ids: direction.structure_ids,
         selected_color_ids: direction.color_ids,
-        selected_fabric_ids: direction.fabric_ids,
+        selected_fabric_ids: direction.fabric_ids.slice(0, 1),
         selected_selling_point_ids: direction.selling_point_ids,
       };
       set({ selection, myDesignPlan: buildPlan(analysis, selection) });
@@ -178,11 +204,11 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => {
       const plan = get().myDesignPlan;
       if (!plan) return;
       downloadFile(
-        "styleforge-design-plan.md",
+        "styleforge-trend-report.md",
         `# ${plan.recommended_direction}\n\n${plan.design_summary}\n\n爆款指数：${plan.popularity_score}\n\n## AI Prompt\n\n${plan.ai_prompt}\n`,
         "text/markdown",
       );
-      toast.success("Markdown 已导出");
+      toast.success("趋势报告已导出");
     },
   };
 });

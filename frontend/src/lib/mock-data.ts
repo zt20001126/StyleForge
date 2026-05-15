@@ -41,6 +41,14 @@ export const mockAnalysis: TrendAnalysisResponse = {
         reason: "利于客单价提升和高端款式延展。",
         tags: ["高端", "质感"],
       },
+      {
+        id: "style_soft_utility",
+        name: "柔和实用主义",
+        description: "用柔化线条和实用细节平衡功能感与亲和力。",
+        score: 85,
+        reason: "适合从通勤扩展到周末短途，降低高机能风格的穿搭门槛。",
+        tags: ["实用", "柔和"],
+      },
     ],
     silhouettes: [
       {
@@ -66,6 +74,14 @@ export const mockAnalysis: TrendAnalysisResponse = {
         score: 78,
         reason: "功能明确但时髦度稍弱。",
         tags: ["覆盖", "功能"],
+      },
+      {
+        id: "silhouette_drawstring_hem",
+        name: "抽绳收摆",
+        description: "通过下摆抽绳在利落短款和防风包裹之间切换。",
+        score: 84,
+        reason: "提升版型可调性，也让详情页更容易表达穿法差异。",
+        tags: ["可调", "收摆"],
       },
     ],
     core_structures: [
@@ -161,6 +177,14 @@ export const mockAnalysis: TrendAnalysisResponse = {
         reason: "增强通勤和出行场景。",
         tags: ["抗皱", "旅行"],
       },
+      {
+        id: "fabric_matte_ripstop",
+        name: "哑光格纹防撕裂",
+        description: "轻薄格纹肌理带来户外性能感但不显厚重。",
+        score: 84,
+        reason: "能提高近景质感和耐用感，适合做中高价位款。",
+        tags: ["防撕裂", "哑光"],
+      },
     ],
     selling_points: [
       {
@@ -245,12 +269,28 @@ export const mockAnalysis: TrendAnalysisResponse = {
         cost_complexity: "high",
         ai_prompt: "高端静奢女款轻户外防晒外套，石墨灰中长廓形，抗皱旅行面料，便携收纳，高领防晒帽，低调高级。",
       },
+      {
+        id: "direction_packable_weekend",
+        name: "周末轻旅行便携款",
+        positioning: "可收纳轻户外防晒夹克",
+        target_user: "城市周末短途与旅行用户",
+        style_ids: ["style_soft_utility"],
+        silhouette_ids: ["silhouette_drawstring_hem"],
+        structure_ids: ["structure_packable", "structure_sun_hood"],
+        color_ids: ["color_glacier_white", "color_lime_signal"],
+        fabric_ids: ["fabric_matte_ripstop", "fabric_uv_shell"],
+        selling_point_ids: ["sp_packable", "sp_upf", "sp_commute_ready"],
+        design_summary: "抽绳收摆结合便携收纳结构，兼顾周末短途、防晒防风和城市穿搭。",
+        popularity_score: 84,
+        cost_complexity: "medium",
+        ai_prompt: "女款周末轻旅行防晒夹克，抽绳收摆，哑光格纹防撕裂面料，冰川白搭配信号青柠点缀，便携收纳，UPF 50+。",
+      },
     ],
     base_prompt: "女款防晒夹克，18-30 岁城市通勤女性，通勤与轻户外场景，冷感高级科技风。",
   },
 };
 
-export const mockPlans: MyDesignPlan[] = mockAnalysis.result.recommended_directions.map((direction) => ({
+export const mockPlans: MyDesignPlan[] = mockAnalysis.result!.recommended_directions.map((direction) => ({
   id: direction.id,
   analysis_id: mockAnalysis.analysis_id,
   design_summary: direction.design_summary,

@@ -78,11 +78,11 @@ class TrendAnalysisCreateResponse(BaseModel):
     analysis_id: str
     status: Literal["processing", "success", "failed"]
     input: TrendAnalysisInput
-    result: TrendAnalysisResult
+    result: TrendAnalysisResult | None = None
+    error_message: str | None = None
 
 
 class TrendAnalysisDetail(TrendAnalysisCreateResponse):
-    error_message: str | None = None
     created_at: datetime
     updated_at: datetime
 

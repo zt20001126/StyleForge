@@ -1,12 +1,17 @@
 import os
 
 os.environ["STORAGE_MODE"] = "memory"
+os.environ["USE_MOCK_AI"] = "true"
 os.environ.pop("DATABASE_URL", None)
 
 from fastapi.testclient import TestClient
 
+from app.api.routes import trend_analyses
+from app.core.config import Settings
+from app.core.errors import AICallFailedError
 from app.main import app
 from app.repositories import repository
+from app.services.ai_client import call_chat_completion
 
 
 client = TestClient(app)
@@ -39,13 +44,168 @@ def test_health() -> None:
     assert body["storage_mode"] == "memory"
 
 
+def test_settings_read_openai_environment_variables(monkeypatch) -> None:
+    monkeypatch.delenv("AI_API_KEY", raising=False)
+    monkeypatch.delenv("AI_BASE_URL", raising=False)
+    monkeypatch.delenv("AI_MODEL", raising=False)
+    monkeypatch.setenv("OPENAI_API_KEY", "openai-key")
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://openai.example/v1")
+    monkeypatch.setenv("OPENAI_MODEL", "gpt-4o-mini")
+
+    settings = Settings(_env_file=None)
+
+    assert settings.ai_api_key == "openai-key"
+    assert settings.ai_base_url == "https://openai.example/v1"
+    assert settings.ai_model == "gpt-4o-mini"
+
+
+def test_settings_keep_legacy_ai_environment_variables(monkeypatch) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    monkeypatch.delenv("OPENAI_MODEL", raising=False)
+    monkeypatch.setenv("AI_API_KEY", "legacy-key")
+    monkeypatch.setenv("AI_BASE_URL", "https://legacy.example/v1")
+    monkeypatch.setenv("AI_MODEL", "legacy-model")
+
+    settings = Settings(_env_file=None)
+
+    assert settings.ai_api_key == "legacy-key"
+    assert settings.ai_base_url == "https://legacy.example/v1"
+    assert settings.ai_model == "legacy-model"
+
+
+def test_openai_environment_variables_take_priority_over_legacy(monkeypatch) -> None:
+    monkeypatch.setenv("OPENAI_API_KEY", "openai-key")
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://openai.example/v1")
+    monkeypatch.setenv("OPENAI_MODEL", "gpt-4o-mini")
+    monkeypatch.setenv("AI_API_KEY", "legacy-key")
+    monkeypatch.setenv("AI_BASE_URL", "https://legacy.example/v1")
+    monkeypatch.setenv("AI_MODEL", "legacy-model")
+
+    settings = Settings(_env_file=None)
+
+    assert settings.ai_api_key == "openai-key"
+    assert settings.ai_base_url == "https://openai.example/v1"
+    assert settings.ai_model == "gpt-4o-mini"
+
+
+def test_settings_build_ark_provider_config(monkeypatch) -> None:
+    monkeypatch.setenv("AI_PROVIDER", "ark")
+    monkeypatch.setenv("ARK_API_KEY", "ark-key")
+    monkeypatch.setenv("ARK_BASE_URL", "https://ark.example/api/v3")
+    monkeypatch.setenv("ARK_TEXT_MODEL", "doubao-test")
+
+    settings = Settings(_env_file=None)
+    provider = settings.get_ai_provider_config()
+
+    assert provider.provider == "ark"
+    assert provider.api_key == "ark-key"
+    assert provider.base_url == "https://ark.example/api/v3"
+    assert provider.model == "doubao-test"
+
+
+def test_settings_build_dashscope_provider_config(monkeypatch) -> None:
+    monkeypatch.setenv("AI_PROVIDER", "dashscope")
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "dashscope-key")
+    monkeypatch.setenv("DASHSCOPE_BASE_URL", "https://dashscope.example/v1")
+    monkeypatch.setenv("DASHSCOPE_TEXT_MODEL", "qwen-test")
+
+    settings = Settings(_env_file=None)
+    provider = settings.get_ai_provider_config()
+
+    assert provider.provider == "dashscope"
+    assert provider.api_key == "dashscope-key"
+    assert provider.base_url == "https://dashscope.example/v1"
+    assert provider.model == "qwen-test"
+
+
+def test_settings_build_object_storage_config(monkeypatch) -> None:
+    monkeypatch.setenv("OBJECT_STORAGE_PROVIDER", "minio")
+    monkeypatch.setenv("MINIO_ENDPOINT", "http://localhost:9000")
+    monkeypatch.setenv("MINIO_ACCESS_KEY", "minio-user")
+    monkeypatch.setenv("MINIO_SECRET_KEY", "minio-secret")
+    monkeypatch.setenv("MINIO_BUCKET", "styleforge-assets")
+
+    settings = Settings(_env_file=None)
+    storage = settings.object_storage
+
+    assert storage.provider == "minio"
+    assert storage.endpoint == "http://localhost:9000"
+    assert storage.access_key == "minio-user"
+    assert storage.secret_key == "minio-secret"
+    assert storage.bucket == "styleforge-assets"
+
+
+def test_real_ai_requires_api_key(monkeypatch) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("AI_API_KEY", raising=False)
+    monkeypatch.delenv("ARK_API_KEY", raising=False)
+    monkeypatch.delenv("DASHSCOPE_API_KEY", raising=False)
+    settings = Settings(
+        _env_file=None,
+        ai_api_key=None,
+        ai_base_url="https://openai.example/v1",
+        ai_model="gpt-4o-mini",
+    )
+
+    try:
+        call_chat_completion("prompt", settings)
+    except AICallFailedError as exc:
+        assert exc.code == "AI_CALL_FAILED"
+        assert "OPENAI_API_KEY or AI_API_KEY" in exc.message
+    else:
+        raise AssertionError("call_chat_completion should require an API key")
+
+
 def test_create_trend_analysis_with_mock_ai() -> None:
     body = _create_analysis()
     assert body["status"] == "success"
     assert body["analysis_id"]
     assert body["result"]["summary"]
-    assert len(body["result"]["style_directions"]) >= 3
-    assert len(body["result"]["recommended_directions"]) == 3
+    assert len(body["result"]["style_directions"]) == 4
+    assert len(body["result"]["silhouettes"]) == 4
+    assert len(body["result"]["fabric_trends"]) == 4
+    assert len(body["result"]["recommended_directions"]) == 4
+
+
+def test_create_trend_analysis_with_real_ai_response(monkeypatch) -> None:
+    monkeypatch.setattr(trend_analyses.settings, "use_mock_ai", False)
+    monkeypatch.setattr(trend_analyses.settings, "ai_api_key", "test-key")
+    monkeypatch.setattr(trend_analyses, "call_chat_completion", lambda prompt, settings: _valid_ai_response())
+
+    body = _create_analysis()
+
+    assert body["status"] == "success"
+    assert body["result"]["summary"] == "A clear trend summary."
+    assert body["error_message"] is None
+
+
+def test_invalid_ai_response_is_saved_as_failed(monkeypatch) -> None:
+    monkeypatch.setattr(trend_analyses.settings, "use_mock_ai", False)
+    monkeypatch.setattr(trend_analyses.settings, "ai_api_key", "test-key")
+    monkeypatch.setattr(trend_analyses, "call_chat_completion", lambda prompt, settings: "not json")
+
+    response = client.post(
+        "/api/trend-analyses",
+        json={
+            "category": "dress",
+            "target_user": "commuter women",
+            "scene": "office",
+            "style": "minimal",
+        },
+    )
+
+    assert response.status_code == 502
+    assert response.json()["code"] == "AI_RESULT_INVALID"
+
+    history = client.get("/api/trend-analyses?page=1&page_size=20").json()
+    assert history["pagination"]["total"] == 1
+    assert history["list"][0]["status"] == "failed"
+
+    detail = client.get(f"/api/trend-analyses/{history['list'][0]['analysis_id']}").json()
+    assert detail["status"] == "failed"
+    assert detail["result"] is None
+    assert detail["error_message"] == "AI response was not valid JSON"
 
 
 def test_get_trend_analysis_detail() -> None:
@@ -185,3 +345,92 @@ def test_not_found_errors() -> None:
     plan_response = client.get("/api/design-plans/not-found")
     assert plan_response.status_code == 404
     assert plan_response.json()["code"] == "NOT_FOUND"
+
+
+def _valid_ai_response() -> str:
+    return """
+    {
+      "summary": "A clear trend summary.",
+      "opportunity": "A clear market opportunity.",
+      "risk": "A clear market risk.",
+      "style_directions": [
+        {
+          "id": "style_minimal",
+          "name": "Minimal utility",
+          "description": "Clean lines with practical detail.",
+          "score": 90,
+          "reason": "It balances daily wear and product differentiation.",
+          "tags": ["minimal", "utility"]
+        }
+      ],
+      "silhouettes": [
+        {
+          "id": "silhouette_relaxed",
+          "name": "Relaxed straight",
+          "description": "Easy straight silhouette.",
+          "score": 88,
+          "reason": "It fits a broad audience.",
+          "tags": ["straight"]
+        }
+      ],
+      "core_structures": [
+        {
+          "id": "structure_pocket",
+          "name": "Hidden pocket",
+          "description": "Useful hidden storage.",
+          "score": 86,
+          "reason": "It creates a tangible selling point.",
+          "tags": ["storage"]
+        }
+      ],
+      "color_palette": [
+        {
+          "id": "color_ivory",
+          "name": "Ivory",
+          "hex": "#F6F1E8",
+          "role": "primary",
+          "score": 87,
+          "reason": "It is versatile and commercial."
+        }
+      ],
+      "fabric_trends": [
+        {
+          "id": "fabric_cotton",
+          "name": "Cotton blend",
+          "description": "Soft and structured.",
+          "score": 85,
+          "reason": "It is suitable for everyday wear.",
+          "tags": ["cotton"]
+        }
+      ],
+      "selling_points": [
+        {
+          "id": "sp_easy_care",
+          "name": "Easy care",
+          "description": "Low-maintenance daily wear.",
+          "score": 89,
+          "reason": "It reduces purchase hesitation.",
+          "tags": ["care"]
+        }
+      ],
+      "recommended_directions": [
+        {
+          "id": "direction_daily",
+          "name": "Daily utility direction",
+          "positioning": "Commercial daily wear",
+          "target_user": "commuter women",
+          "style_ids": ["style_minimal"],
+          "silhouette_ids": ["silhouette_relaxed"],
+          "structure_ids": ["structure_pocket"],
+          "color_ids": ["color_ivory"],
+          "fabric_ids": ["fabric_cotton"],
+          "selling_point_ids": ["sp_easy_care"],
+          "design_summary": "A clean daily style with utility details.",
+          "popularity_score": 88,
+          "cost_complexity": "low",
+          "ai_prompt": "minimal utility daily wear, ivory, relaxed straight silhouette"
+        }
+      ],
+      "base_prompt": "minimal utility daily wear"
+    }
+    """

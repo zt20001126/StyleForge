@@ -24,7 +24,7 @@ class MemoryRepository:
     def create_trend_analysis(
         self,
         input_data: TrendAnalysisInput,
-        result: TrendAnalysisResult,
+        result: TrendAnalysisResult | None,
         status: Literal["processing", "success", "failed"] = "success",
         error_message: str | None = None,
         analysis_prompt: str | None = None,

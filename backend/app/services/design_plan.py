@@ -7,6 +7,9 @@ def generate_design_plan(analysis: TrendAnalysisDetail, selection: UserDesignSel
         raise ValidationAppError("selection.analysis_id does not match analysis_id")
 
     result = analysis.result
+    if result is None:
+        raise ValidationAppError("trend analysis result is not available")
+
     pools = {
         "selected_style_ids": result.style_directions,
         "selected_silhouette_ids": result.silhouettes,
@@ -47,7 +50,7 @@ def generate_design_plan(analysis: TrendAnalysisDetail, selection: UserDesignSel
         recommended_direction=direction_name,
         popularity_score=popularity_score,
         ai_prompt=(
-            f"{analysis.result.base_prompt}，{'，'.join(selected_names)}，"
+            f"{result.base_prompt}，{'，'.join(selected_names)}，"
             "高级成衣设计稿，清晰产品结构，电商主图级质感。"
         ),
         selected_items=selection,
@@ -56,6 +59,8 @@ def generate_design_plan(analysis: TrendAnalysisDetail, selection: UserDesignSel
 
 
 def _match_direction_name(analysis: TrendAnalysisDetail, selection: UserDesignSelection) -> str:
+    if analysis.result is None:
+        raise ValidationAppError("trend analysis result is not available")
     for direction in analysis.result.recommended_directions:
         if set(direction.style_ids).issubset(selection.selected_style_ids):
             return direction.name

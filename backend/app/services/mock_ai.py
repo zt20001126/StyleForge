@@ -37,6 +37,14 @@ def generate_mock_trend_result(input_data: TrendAnalysisInput) -> TrendAnalysisR
                     "reason": "有利于提升客单价和高端系列延展。",
                     "tags": ["高端", "户外"],
                 },
+                {
+                    "id": "style_soft_utility",
+                    "name": "柔和实用主义",
+                    "description": "用柔化线条和实用细节平衡功能感与亲和力。",
+                    "score": 85,
+                    "reason": "适合从通勤扩展到周末短途，降低高机能风格的穿搭门槛。",
+                    "tags": ["实用", "柔和"],
+                },
             ],
             "silhouettes": [
                 {
@@ -62,6 +70,14 @@ def generate_mock_trend_result(input_data: TrendAnalysisInput) -> TrendAnalysisR
                     "score": 78,
                     "reason": "功能明确，但时髦度和搭配轻盈感稍弱。",
                     "tags": ["中长", "防护"],
+                },
+                {
+                    "id": "silhouette_drawstring_hem",
+                    "name": "抽绳收摆",
+                    "description": "通过下摆抽绳在利落短款和防风包裹之间切换。",
+                    "score": 84,
+                    "reason": "提升版型可调性，也让详情页更容易表达穿法差异。",
+                    "tags": ["可调", "收摆"],
                 },
             ],
             "core_structures": [
@@ -157,6 +173,14 @@ def generate_mock_trend_result(input_data: TrendAnalysisInput) -> TrendAnalysisR
                     "reason": "增强通勤和出行场景。",
                     "tags": ["抗皱", "旅行"],
                 },
+                {
+                    "id": "fabric_matte_ripstop",
+                    "name": "哑光格纹防撕裂",
+                    "description": "轻薄格纹肌理带来户外性能感但不显厚重。",
+                    "score": 84,
+                    "reason": "能提高近景质感和耐用感，适合做中高价位款。",
+                    "tags": ["防撕裂", "哑光"],
+                },
             ],
             "selling_points": [
                 {
@@ -240,6 +264,22 @@ def generate_mock_trend_result(input_data: TrendAnalysisInput) -> TrendAnalysisR
                     "popularity_score": 80,
                     "cost_complexity": "high",
                     "ai_prompt": f"{category}，静奢轻户外风，石墨灰，中长廓形，抗皱旅行面料，便携收纳，高领防护。",
+                },
+                {
+                    "id": "direction_packable_weekend",
+                    "name": "周末轻旅行便携方案",
+                    "positioning": f"可收纳轻户外 {category}",
+                    "target_user": target_user,
+                    "style_ids": ["style_soft_utility"],
+                    "silhouette_ids": ["silhouette_drawstring_hem"],
+                    "structure_ids": ["structure_packable", "structure_sun_hood"],
+                    "color_ids": ["color_glacier_white", "color_lime_signal"],
+                    "fabric_ids": ["fabric_matte_ripstop", "fabric_uv_shell"],
+                    "selling_point_ids": ["sp_packable", "sp_upf", "sp_commute_ready"],
+                    "design_summary": f"面向 {target_user} 的周末短途场景，强调可收纳、可调节与轻防护。",
+                    "popularity_score": 84,
+                    "cost_complexity": "medium",
+                    "ai_prompt": f"{category}，周末轻旅行风，抽绳收摆，哑光格纹防撕裂面料，冰川白搭配信号青柠，便携收纳，UPF 50+。",
                 },
             ],
             "base_prompt": f"{category}，{target_user}，{scene}，{style}，高级服装产品设计稿。",
