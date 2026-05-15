@@ -11,8 +11,9 @@ export default function Page() {
         <CardHeader>
           <CardTitle>接口与模型配置</CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          MVP 当前使用 mock 数据。后续将通过 `NEXT_PUBLIC_API_BASE_URL` 与后端 FastAPI 服务连接。
+        <CardContent className="space-y-3 text-sm text-muted-foreground">
+          <p>前端默认启用 mock 模式；设置 NEXT_PUBLIC_USE_MOCKS=false 后，会通过 NEXT_PUBLIC_API_BASE_URL 连接后端 FastAPI。</p>
+          <p>后端默认 USE_MOCK_AI=true，真实模型供应商和 API Key 仍保留为后续配置。</p>
         </CardContent>
       </Card>
     </div>

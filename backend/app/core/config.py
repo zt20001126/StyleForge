@@ -11,10 +11,14 @@ class Settings(BaseSettings):
     storage_mode: str = "memory"
     frontend_origin: str = "http://localhost:3000"
     database_url: str | None = None
+    ai_provider: str = "mock"
     ai_api_key: str | None = None
     ai_base_url: str = "https://api.example.com/v1"
-    ai_model: str = "gpt-4o-mini"
+    ai_model: str = "mock-fashion-trend"
     ai_timeout_seconds: int = Field(default=60, ge=1, le=300)
+    log_dir: str = "logs"
+    log_level: str = "INFO"
+    log_retention_days: int = Field(default=30, ge=1, le=3650)
 
     model_config = SettingsConfigDict(
         env_file=".env",

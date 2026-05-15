@@ -1,3 +1,8 @@
+import os
+
+os.environ["STORAGE_MODE"] = "memory"
+os.environ.pop("DATABASE_URL", None)
+
 from fastapi.testclient import TestClient
 
 from app.main import app

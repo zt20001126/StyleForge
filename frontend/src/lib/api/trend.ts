@@ -1,8 +1,32 @@
 import { mockAnalysis, mockPlans } from "@/lib/mock-data";
-import type { MyDesignPlan, TrendAnalysisInput, TrendAnalysisResponse, UserDesignSelection } from "@/lib/types/trend";
+import type {
+  ApiErrorResponse,
+  MyDesignPlan,
+  PaginatedTrendAnalyses,
+  TrendAnalysisInput,
+  TrendAnalysisResponse,
+  TrendAnalysisSummary,
+  UserDesignSelection,
+} from "@/lib/types/trend";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS !== "false";
+
+export class ApiError extends Error {
+  code?: string;
+  requestId?: string;
+  status: number;
+  details?: unknown;
+
+  constructor(status: number, errorBody?: ApiErrorResponse) {
+    super(errorBody?.message ?? `Request failed: ${status}`);
+    this.name = "ApiError";
+    this.status = status;
+    this.code = errorBody?.code;
+    this.requestId = errorBody?.request_id;
+    this.details = errorBody?.details;
+  }
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -14,10 +38,30 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new Error(`Request failed: ${response.status}`);
+    throw new ApiError(response.status, await readErrorBody(response));
   }
 
   return response.json() as Promise<T>;
+}
+
+async function readErrorBody(response: Response): Promise<ApiErrorResponse | undefined> {
+  try {
+    return (await response.json()) as ApiErrorResponse;
+  } catch {
+    return undefined;
+  }
+}
+
+function toTrendAnalysisSummary(analysis: TrendAnalysisResponse): TrendAnalysisSummary {
+  return {
+    analysis_id: analysis.analysis_id,
+    category: analysis.input.category,
+    target_user: analysis.input.target_user,
+    scene: analysis.input.scene,
+    style: analysis.input.style,
+    status: analysis.status,
+    created_at: analysis.created_at ?? new Date().toISOString(),
+  };
 }
 
 export async function createTrendAnalysis(input: TrendAnalysisInput): Promise<TrendAnalysisResponse> {
@@ -35,12 +79,12 @@ export async function createTrendAnalysis(input: TrendAnalysisInput): Promise<Tr
   });
 }
 
-export async function listTrendAnalyses(): Promise<TrendAnalysisResponse[]> {
+export async function listTrendAnalyses(): Promise<TrendAnalysisSummary[]> {
   if (USE_MOCKS) {
-    return [mockAnalysis];
+    return [toTrendAnalysisSummary(mockAnalysis)];
   }
 
-  const response = await request<{ list: TrendAnalysisResponse[] }>("/api/trend-analyses?page=1&page_size=20");
+  const response = await request<PaginatedTrendAnalyses>("/api/trend-analyses?page=1&page_size=20");
   return response.list;
 }
 

@@ -9,6 +9,7 @@ from app.schemas.trend import (
     TrendAnalysisInput,
 )
 from app.services.mock_ai import generate_mock_trend_result
+from app.services.trend_prompt import build_trend_analysis_prompt
 from app.services.trend_validator import validate_trend_result
 
 router = APIRouter(prefix="/api/trend-analyses", tags=["trend-analyses"])
@@ -16,9 +17,15 @@ router = APIRouter(prefix="/api/trend-analyses", tags=["trend-analyses"])
 
 @router.post("", response_model=TrendAnalysisCreateResponse)
 def create_trend_analysis(payload: TrendAnalysisInput) -> TrendAnalysisCreateResponse:
+    analysis_prompt = build_trend_analysis_prompt(payload)
     result = generate_mock_trend_result(payload)
     validate_trend_result(result)
-    analysis = repository.create_trend_analysis(payload, result)
+    analysis = repository.create_trend_analysis(
+        payload,
+        result,
+        analysis_prompt=analysis_prompt,
+        raw_response=result.model_dump_json(),
+    )
     return TrendAnalysisCreateResponse(
         analysis_id=analysis.analysis_id,
         status=analysis.status,

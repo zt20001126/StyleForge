@@ -27,6 +27,8 @@ class MemoryRepository:
         result: TrendAnalysisResult,
         status: Literal["processing", "success", "failed"] = "success",
         error_message: str | None = None,
+        analysis_prompt: str | None = None,
+        raw_response: str | None = None,
     ) -> TrendAnalysisDetail:
         now = _now()
         analysis = TrendAnalysisDetail(

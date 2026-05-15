@@ -62,6 +62,27 @@ export interface TrendAnalysisResponse {
   created_at?: string;
 }
 
+export interface TrendAnalysisSummary {
+  analysis_id: string;
+  category: string;
+  target_user: string;
+  scene: string;
+  style: string;
+  status: "processing" | "success" | "failed";
+  created_at: string;
+}
+
+export interface Pagination {
+  page: number;
+  page_size: number;
+  total: number;
+}
+
+export interface PaginatedTrendAnalyses {
+  list: TrendAnalysisSummary[];
+  pagination: Pagination;
+}
+
 export interface UserDesignSelection {
   analysis_id: string;
   selected_style_ids: string[];
@@ -85,4 +106,11 @@ export interface MyDesignPlan {
   created_at?: string;
   updated_at?: string;
   is_favorite?: boolean;
+}
+
+export interface ApiErrorResponse {
+  code?: string;
+  message?: string;
+  request_id?: string;
+  details?: unknown;
 }

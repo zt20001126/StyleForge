@@ -2,19 +2,41 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { GalleryVerticalEnd, History, LayoutDashboard, Settings, Sparkles } from "lucide-react";
+import {
+  Brush,
+  FileText,
+  GalleryVerticalEnd,
+  History,
+  ImagePlus,
+  LayoutDashboard,
+  Palette,
+  ScanFace,
+  Settings,
+  Sparkles,
+  UserRound,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const navItems = [
   { href: "/trend-workbench", label: "趋势工作台", icon: LayoutDashboard },
+  { href: "/generate", label: "AI 生成", icon: Sparkles },
   { href: "/gallery", label: "方案库", icon: GalleryVerticalEnd },
+  { href: "/generate/text-to-style", label: "以文生款", icon: FileText },
+  { href: "/generate/style-variation", label: "以款生款", icon: ImagePlus },
+  { href: "/generate/pattern-craft", label: "图案工艺", icon: Brush },
+  { href: "/generate/commercial-shoot", label: "换模特背景", icon: ScanFace },
+  { href: "/generate/recolor", label: "服装配色", icon: Palette },
+  { href: "/generate/try-on", label: "服装上身", icon: UserRound },
   { href: "/history", label: "历史", icon: History },
   { href: "/settings", label: "设置", icon: Settings },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const activeHref = navItems
+    .filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
   return (
     <div className="min-h-screen bg-background">
@@ -35,7 +57,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               href={item.href}
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground",
-                pathname === item.href && "bg-primary/12 text-primary",
+                activeHref === item.href && "bg-primary/12 text-primary",
               )}
             >
               <item.icon className="size-4" />
