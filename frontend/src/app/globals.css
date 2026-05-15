@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #f7fafc;
+  --foreground: #10151f;
+  --card: #ffffff;
+  --card-foreground: #10151f;
+  --muted: #edf2f7;
+  --muted-foreground: #667085;
+  --border: #d7dee8;
+  --primary: #0891b2;
+  --primary-foreground: #ecfeff;
+  --accent: #7c3aed;
+  --accent-foreground: #f5f3ff;
+  --destructive: #dc2626;
+  --radius: 0.75rem;
+}
+
+.dark {
+  --background: #060a12;
+  --foreground: #ecf4ff;
+  --card: #0b1220;
+  --card-foreground: #ecf4ff;
+  --muted: #111827;
+  --muted-foreground: #9aa9bd;
+  --border: rgba(148, 163, 184, 0.24);
+  --primary: #22d3ee;
+  --primary-foreground: #031018;
+  --accent: #a78bfa;
+  --accent-foreground: #12091f;
+  --destructive: #fb7185;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(34, 211, 238, 0.16), transparent 28rem),
+    radial-gradient(circle at 90% 12%, rgba(167, 139, 250, 0.15), transparent 24rem),
+    var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.glass-panel {
+  background: color-mix(in oklab, var(--card) 84%, transparent);
+  border: 1px solid var(--border);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(18px);
+}
+
+.grid-glow {
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(to bottom, black, transparent 78%);
+}
