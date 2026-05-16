@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export type DesignTaskStatus = "idle" | "processing" | "success" | "failed" | "cancelled";
 
@@ -213,7 +214,12 @@ export function FashionWorkbenchPage({ config }: { config: FashionWorkbenchConfi
           onValueChange={(label, value) => setValues((current) => ({ ...current, [label]: value }))}
           onGenerate={handleGenerate}
         />
-        <main className="min-w-0 px-4 py-6 sm:px-5 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:px-8 lg:py-8 lg:pb-28">
+        <main
+          className={cn(
+            "min-w-0 px-4 py-6 sm:px-5 lg:h-full lg:min-h-0 lg:px-8 lg:py-8 lg:pb-28",
+            config.toolType === "text-to-style" ? "lg:overflow-y-auto" : "lg:overflow-hidden",
+          )}
+        >
           {status === "idle" && (
             <ReferenceCaseGallery
               config={config}
@@ -233,7 +239,7 @@ export function FashionWorkbenchPage({ config }: { config: FashionWorkbenchConfi
 
 function RecentTaskPanel({ onNewTask }: { onNewTask: () => void }) {
   return (
-    <aside className="border-b bg-card/55 px-4 py-5 backdrop-blur-xl lg:h-full lg:min-h-0 lg:overflow-y-auto lg:border-b-0 lg:border-r">
+    <aside className="border-b bg-card/55 px-4 py-5 backdrop-blur-xl lg:h-full lg:min-h-0 lg:overflow-hidden lg:border-b-0 lg:border-r">
       <div className="text-center text-sm text-muted-foreground">最近任务</div>
       <button
         type="button"
@@ -304,7 +310,7 @@ function WorkbenchFormPanel({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 pb-5">
+      <div className="min-h-0 flex-1 space-y-5 px-4 pb-5 lg:overflow-hidden">
         <label className="space-y-2">
           <span className="text-sm text-muted-foreground">选择模型</span>
           <select
@@ -326,14 +332,6 @@ function WorkbenchFormPanel({
             onChange={(value) => onValueChange(field.label, value)}
           />
         ))}
-
-        <div className="flex flex-wrap gap-2">
-          {config.tags.map((tag) => (
-            <Badge key={tag} variant="secondary">
-              {tag}
-            </Badge>
-          ))}
-        </div>
 
         {notice && (
           <div className="rounded-md border border-primary/20 bg-primary/10 px-3 py-2 text-sm text-primary">{notice}</div>
@@ -450,7 +448,7 @@ function ReferenceCaseGallery({
         <Badge variant="secondary">可一键套用</Badge>
       </div>
 
-      <section className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 min-[1800px]:grid-cols-5">
+      <section className="mt-6 grid items-stretch gap-5 sm:grid-cols-2 xl:grid-cols-3">
         {config.referenceCases.map((item) => (
           <ReferenceCaseCard
             key={item.id}
@@ -477,7 +475,7 @@ function ReferenceCaseCard({
   onUseCase: (item: ReferenceCase) => void;
 }) {
   return (
-    <article className="glass-panel group relative overflow-hidden rounded-lg">
+    <article className="glass-panel group relative h-full overflow-hidden rounded-lg">
       <Image
         src={item.imageUrl}
         alt={item.title}
