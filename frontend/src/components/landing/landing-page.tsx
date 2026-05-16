@@ -7,7 +7,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
   BarChart3,
-  Bot,
   CheckCircle2,
   Images,
   Layers3,
@@ -16,13 +15,13 @@ import {
   PenTool,
   Shirt,
   Sparkles,
-  WandSparkles,
-  X,
 } from "lucide-react";
+import { AppFooter } from "@/components/landing/app-footer";
+import { AuthDialog } from "@/components/landing/auth-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { AppFooter } from "@/components/landing/app-footer";
+import { type AuthResponse, toUserSession } from "@/lib/api/auth";
 import { writeStoredAuthSession } from "@/lib/auth-session";
 import { showDreamAssistantNotification } from "@/store/assistant-notification-store";
 
@@ -32,16 +31,10 @@ const brand = {
 };
 
 const navItems = [
-  { label: "爆款服装趋势分析", href: "#trend" },
-  { label: "AI 服装设计工具", href: "#tools" },
-  { label: "爆款案例方案", href: "#cases" },
+  { label: "趋势分析", href: "#trend" },
+  { label: "AI 设计工具", href: "#tools" },
+  { label: "案例方案", href: "#cases" },
   { label: "方案库", href: "/gallery" },
-];
-
-const heroStats = [
-  ["91", "趋势热度"],
-  ["6", "设计维度"],
-  ["3", "推荐方案"],
 ];
 
 const capabilities = [
@@ -52,13 +45,13 @@ const capabilities = [
   },
   {
     icon: PenTool,
-    title: "文生款",
+    title: "文生款式",
     text: "用自然语言快速生成款式方向、结构细节、卖点组合和可复用 Prompt。",
   },
   {
     icon: Layers3,
-    title: "以款生款",
-    text: "基于已有款式延展同系列方向，沉淀更完整的产品企划矩阵。",
+    title: "系列延展",
+    text: "基于已有款式扩展同系列方向，沉淀更完整的产品企划矩阵。",
   },
   {
     icon: Palette,
@@ -72,53 +65,35 @@ const capabilities = [
   },
   {
     icon: Shirt,
-    title: "虚拟上身 / 商拍",
+    title: "虚拟上身",
     text: "承接方案 Prompt，后续可进入款式图、试穿图和电商展示图生成流程。",
   },
 ];
 
 const cases = [
   {
-    title: "防晒通勤",
-    audience: "18-30 女性",
-    style: "轻户外 + 城市机能",
+    title: "轻机能防晒夹克",
+    audience: "18-30 城市通勤女性",
+    style: "轻户外 + 都市机能",
     score: 91,
     palette: ["#f5f7f2", "#a9bbcb", "#9eb6a3"],
     result: "短款微宽松防晒夹克，强化高领遮阳、背部透气与 UPF 卖点。",
   },
   {
-    title: "轻户外系列",
+    title: "低饱和周末户外",
     audience: "都市周末出行",
-    style: "低饱和自然色 + 功能层次",
+    style: "自然色 + 功能层次",
     score: 87,
     palette: ["#d8ded2", "#768b7a", "#27343b"],
-    result: "生成 3 套同系列外套/半裙/背心方向，适合小批量测试。",
+    result: "生成同系列外套、半裙、背心方向，适合小批量测试。",
   },
   {
-    title: "电商品类企划",
+    title: "电商爆款企划",
     audience: "内容种草渠道",
     style: "甜酷街头 + 高频上新",
     score: 84,
     palette: ["#f3d7de", "#262a36", "#c7f06a"],
     result: "提炼主图卖点、差异化结构和快速上架的商品标题方向。",
-  },
-];
-
-const businessValues = [
-  {
-    role: "面向设计师",
-    value: "更快形成系列方向",
-    text: "从趋势结论直接进入款式组合，减少空白页阶段的反复试错。",
-  },
-  {
-    role: "面向电商卖家",
-    value: "更快测试爆款卖点",
-    text: "用人群、场景、卖点和热度评分判断哪些商品方向值得先做。",
-  },
-  {
-    role: "面向品牌企划",
-    value: "更快输出趋势方案",
-    text: "把市场机会、设计语言和方案摘要组织成可沟通的企划材料。",
   },
 ];
 
@@ -130,33 +105,22 @@ export function LandingPage() {
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
 
-  function enterWorkbench(mode: "guest" | "user") {
+  function enterGuestWorkbench() {
     const now = new Date().toISOString();
     writeStoredAuthSession({
-      isAuthenticated: mode === "user",
-      authMode: mode,
-      token: mode === "user" ? "mock-front-end-token" : null,
+      isAuthenticated: false,
+      authMode: "guest",
+      token: null,
       refreshToken: null,
-      user:
-        mode === "user"
-          ? {
-              id: "mock-user",
-              name: "DM Designer",
-              email: "designer@dm-styleforge.demo",
-              phone: "",
-              avatar: "",
-              role: "designer",
-              company: "DM",
-            }
-          : null,
-      guestId: mode === "guest" ? `guest-${Date.now()}` : null,
-      guestStartedAt: mode === "guest" ? now : null,
-      guestLimits: mode === "guest" ? { canSaveToCloud: false, maxTrendAnalyses: 3 } : null,
-      workspaceId: "mock-workspace",
-      plan: mode === "user" ? "trial" : "guest",
+      user: null,
+      guestId: `guest-${Date.now()}`,
+      guestStartedAt: now,
+      guestLimits: { canSaveToCloud: false, maxTrendAnalyses: 3 },
+      workspaceId: "guest-workspace",
+      plan: "guest",
       permissions: {
-        canSaveToCloud: mode === "user",
-        canViewHistory: mode === "user",
+        canSaveToCloud: false,
+        canViewHistory: false,
         canExport: true,
         canGenerate: true,
       },
@@ -165,19 +129,21 @@ export function LandingPage() {
         voiceNotificationEnabled: true,
       },
     });
+    setIsAuthDialogOpen(false);
+    router.push("/trend-workbench");
+  }
 
-    if (mode === "user") {
-      showDreamAssistantNotification({
-        type: "success",
-        title: "欢迎回来",
-        message: "登录成功，我可以帮你继续生成设计方案啦～",
-        actionText: "开始创作",
-        returnText: "今天也来做爆款灵感吧！",
-        voiceText: "欢迎回来，开始你的爆款创作吧",
-        voiceType: "login",
-      });
-    }
-
+  function handleAuthenticated(auth: AuthResponse) {
+    writeStoredAuthSession(toUserSession(auth));
+    showDreamAssistantNotification({
+      type: "success",
+      title: "欢迎回来",
+      message: "登录成功，我可以帮你继续生成设计方案啦。",
+      actionText: "开始创作",
+      returnText: "今天也来做爆款灵感吧。",
+      voiceText: "欢迎回来，开始你的爆款创作吧",
+      voiceType: "login",
+    });
     setIsAuthDialogOpen(false);
     router.push("/trend-workbench");
   }
@@ -201,19 +167,11 @@ export function LandingPage() {
         <div className="hidden items-center gap-2 text-sm text-muted-foreground md:flex">
           {navItems.map((item) =>
             item.href.startsWith("#") ? (
-              <a
-                key={item.href}
-                href={item.href}
-                className="rounded-full border border-transparent px-3 py-1.5 transition duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/10 hover:text-foreground hover:shadow-[0_0_22px_rgba(34,211,238,0.16)]"
-              >
+              <a key={item.href} href={item.href} className="rounded-full border border-transparent px-3 py-1.5 transition hover:border-primary/30 hover:bg-primary/10 hover:text-foreground">
                 {item.label}
               </a>
             ) : (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="rounded-full border border-transparent px-3 py-1.5 transition duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/10 hover:text-foreground hover:shadow-[0_0_22px_rgba(34,211,238,0.16)]"
-              >
+              <Link key={item.href} href={item.href} className="rounded-full border border-transparent px-3 py-1.5 transition hover:border-primary/30 hover:bg-primary/10 hover:text-foreground">
                 {item.label}
               </Link>
             ),
@@ -229,7 +187,7 @@ export function LandingPage() {
               setAuthMode("login");
               setIsAuthDialogOpen(true);
             }}
-            className="group relative overflow-hidden bg-gradient-to-r from-cyan-400 via-sky-500 to-violet-500 text-slate-950 shadow-[0_0_28px_rgba(34,211,238,0.42)] transition duration-200 hover:-translate-y-0.5 hover:scale-[1.03] hover:shadow-[0_0_44px_rgba(124,58,237,0.48)] hover:brightness-110"
+            className="group relative overflow-hidden bg-gradient-to-r from-cyan-400 via-sky-500 to-violet-500 text-slate-950 shadow-[0_0_28px_rgba(34,211,238,0.42)] transition hover:-translate-y-0.5 hover:scale-[1.03] hover:brightness-110"
           >
             <span className="absolute inset-y-0 -left-10 w-10 rotate-12 bg-white/35 blur-md transition-all duration-500 group-hover:left-full" />
             <Sparkles className="size-4" />
@@ -241,141 +199,36 @@ export function LandingPage() {
 
       <AnimatePresence>
         {isAuthDialogOpen && (
-          <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 backdrop-blur-md"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onMouseDown={(event) => {
-              if (event.target === event.currentTarget) {
-                setIsAuthDialogOpen(false);
-              }
-            }}
-          >
-            <motion.section
-              role="dialog"
-              aria-modal="true"
-              aria-label="进入 DM StyleForge 工作台"
-              className="relative w-full max-w-md overflow-hidden rounded-xl border border-cyan-300/25 bg-card text-card-foreground shadow-2xl shadow-cyan-950/50"
-              initial={{ opacity: 0, y: 18, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 12, scale: 0.96 }}
-              transition={{ duration: 0.2 }}
-            >
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(34,211,238,0.22),transparent_34%),radial-gradient(circle_at_82%_12%,rgba(167,139,250,0.2),transparent_32%)]" />
-              <div className="relative p-5">
-                <div className="mb-5 flex items-start justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex size-11 items-center justify-center rounded-lg border border-cyan-300/40 bg-gradient-to-br from-cyan-300/25 to-violet-400/25 text-sm font-black text-cyan-100 shadow-[0_0_28px_rgba(34,211,238,0.28)]">
-                      DM
-                    </div>
-                    <div>
-                      <h2 className="text-lg font-semibold">进入 {brand.name} 工作台</h2>
-                      <p className="mt-1 text-xs text-muted-foreground">登录后可保存方案；也可以先以游客身份体验。</p>
-                    </div>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-8 shrink-0"
-                    onClick={() => setIsAuthDialogOpen(false)}
-                    aria-label="关闭登录弹窗"
-                  >
-                    <X className="size-4" />
-                  </Button>
-                </div>
-
-                <div className="mb-4 grid grid-cols-2 rounded-lg border bg-background/55 p-1">
-                  {(["login", "register"] as const).map((mode) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      onClick={() => setAuthMode(mode)}
-                      className={`rounded-md px-3 py-2 text-sm font-medium transition ${
-                        authMode === mode
-                          ? "bg-primary text-primary-foreground shadow-lg shadow-cyan-500/20"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                      }`}
-                    >
-                      {mode === "login" ? "登录" : "注册"}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="space-y-3">
-                  <label className="block">
-                    <span className="mb-1.5 block text-xs text-muted-foreground">手机号 / 邮箱</span>
-                    <input
-                      type="text"
-                      placeholder="designer@dm-styleforge.com"
-                      className="h-10 w-full rounded-md border bg-background px-3 text-sm outline-none transition placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary/70"
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="mb-1.5 block text-xs text-muted-foreground">
-                      {authMode === "login" ? "密码 / 验证码" : "设置密码 / 获取验证码"}
-                    </span>
-                    <input
-                      type="password"
-                      placeholder={authMode === "login" ? "输入密码或验证码" : "设置登录密码"}
-                      className="h-10 w-full rounded-md border bg-background px-3 text-sm outline-none transition placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary/70"
-                    />
-                  </label>
-                </div>
-
-                <div className="mt-5 space-y-3">
-                  <Button
-                    type="button"
-                    className="w-full bg-gradient-to-r from-cyan-400 via-sky-500 to-violet-500 text-slate-950 shadow-[0_0_30px_rgba(34,211,238,0.36)] hover:brightness-110"
-                    onClick={() => enterWorkbench("user")}
-                  >
-                    {authMode === "login" ? "登录并进入" : "注册并进入"}
-                    <ArrowRight className="size-4" />
-                  </Button>
-                  <Button type="button" variant="outline" className="w-full" onClick={() => enterWorkbench("guest")}>
-                    暂不登录，先进入体验
-                  </Button>
-                </div>
-
-                <p className="mt-4 text-center text-xs leading-5 text-muted-foreground">
-                  当前为前端演示登录，不会发送真实账号请求。后续可接入 token、用户信息、游客权限与工作台权限。
-                </p>
-              </div>
-            </motion.section>
-          </motion.div>
+          <AuthDialog
+            brandName={brand.name}
+            initialMode={authMode}
+            onClose={() => setIsAuthDialogOpen(false)}
+            onGuest={enterGuestWorkbench}
+            onAuthenticated={handleAuthenticated}
+          />
         )}
       </AnimatePresence>
 
-      <section
-        id="trend"
-        className="relative z-10 mx-auto grid min-h-[calc(100vh-84px)] max-w-7xl items-center gap-10 px-5 pb-16 pt-8 lg:grid-cols-[0.9fr_1.1fr]"
-      >
-        <motion.div
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="flex flex-col gap-7"
-        >
-          <Badge className="w-fit">趋势分析 + AI设计工作台</Badge>
-
+      <section id="trend" className="relative z-10 mx-auto grid min-h-[calc(100vh-84px)] max-w-7xl items-center gap-10 px-5 pb-16 pt-8 lg:grid-cols-[0.9fr_1.1fr]">
+        <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="flex flex-col gap-7">
+          <Badge className="w-fit">趋势分析 + AI 设计工作台</Badge>
           <div className="space-y-5">
             <h1 className="max-w-4xl text-5xl font-semibold leading-tight md:text-7xl">StyleForge</h1>
-            <p className="max-w-2xl text-xl font-medium leading-8 md:text-2xl">
-              从趋势洞察到 AI 服装方案生成
-            </p>
+            <p className="max-w-2xl text-xl font-medium leading-8 md:text-2xl">从趋势洞察到 AI 服装方案生成</p>
             <p className="max-w-2xl text-base leading-8 text-muted-foreground md:text-lg">
-              面向设计师、电商卖家和品牌企划的 AI 服装趋势决策平台。把市场机会、设计要素和生成式
-              Prompt 收束到一个可执行的方案工作流。
+              面向设计师、电商卖家和品牌企划的 AI 服装趋势决策平台，把市场机会、设计要素和生成式 Prompt 收束到可执行的方案工作流。
             </p>
           </div>
-
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Button asChild size="lg">
-              <Link href="/trend-workbench">
-                开始趋势分析
-                <ArrowRight className="size-4" />
-              </Link>
+            <Button
+              size="lg"
+              onClick={() => {
+                setAuthMode("login");
+                setIsAuthDialogOpen(true);
+              }}
+            >
+              开始趋势分析
+              <ArrowRight className="size-4" />
             </Button>
             <Button asChild variant="outline" size="lg">
               <a href="#cases">查看案例方案</a>
@@ -384,9 +237,12 @@ export function LandingPage() {
               <Link href="/generate">进入 AI 设计工具</Link>
             </Button>
           </div>
-
           <div className="grid max-w-2xl grid-cols-3 gap-3">
-            {heroStats.map(([value, label]) => (
+            {[
+              ["91", "趋势热度"],
+              ["6", "设计维度"],
+              ["3", "推荐方案"],
+            ].map(([value, label]) => (
               <div key={label} className="glass-panel rounded-lg p-4">
                 <div className="text-2xl font-semibold tabular-nums">{value}</div>
                 <div className="text-xs text-muted-foreground">{label}</div>
@@ -395,15 +251,7 @@ export function LandingPage() {
           </div>
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.7, delay: 0.1 }}
-          className="glass-panel relative rounded-xl p-4"
-        >
-          <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-cyan-300/15 blur-3xl" />
-          <div className="absolute -bottom-12 left-10 h-44 w-44 rounded-full bg-violet-300/15 blur-3xl" />
-
+        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.7, delay: 0.1 }} className="glass-panel relative rounded-xl p-4">
           <div className="relative grid gap-4 rounded-lg border bg-background/60 p-4 lg:grid-cols-[1.05fr_0.95fr]">
             <div className="space-y-4">
               <div className="flex items-center justify-between gap-4">
@@ -413,7 +261,6 @@ export function LandingPage() {
                 </div>
                 <Badge variant="success">Live</Badge>
               </div>
-
               <div className="rounded-lg border bg-card/75 p-4">
                 <div className="mb-3 flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">趋势热度</span>
@@ -421,26 +268,13 @@ export function LandingPage() {
                 </div>
                 <div className="flex h-36 items-end gap-2">
                   {trendBars.map((height, index) => (
-                    <div
-                      key={index}
-                      className="flex-1 rounded-t bg-gradient-to-t from-cyan-400/35 to-violet-300"
-                      style={{ height: `${height}%` }}
-                    />
+                    <div key={index} className="flex-1 rounded-t bg-gradient-to-t from-cyan-400/35 to-violet-300" style={{ height: `${height}%` }} />
                   ))}
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-lg border bg-card/75 p-4">
-                  <BarChart3 className="mb-3 size-5 text-primary" />
-                  <p className="text-xs text-muted-foreground">机会点</p>
-                  <p className="mt-1 text-sm font-medium">通勤 + 户外双场景</p>
-                </div>
-                <div className="rounded-lg border bg-card/75 p-4">
-                  <Bot className="mb-3 size-5 text-violet-400" />
-                  <p className="text-xs text-muted-foreground">AI 推荐</p>
-                  <p className="mt-1 text-sm font-medium">轻量防晒机能风</p>
-                </div>
+                <InfoTile icon={BarChart3} label="机会点" value="通勤 + 户外双场景" />
+                <InfoTile icon={Palette} label="AI 推荐" value="轻量防晒机能风" />
               </div>
             </div>
 
@@ -450,16 +284,10 @@ export function LandingPage() {
                   <div className="absolute left-1/2 top-8 h-36 w-28 -translate-x-1/2 rounded-t-[42px] rounded-b-xl border border-cyan-500/20 bg-white/80 shadow-2xl shadow-cyan-500/15 dark:bg-slate-100/90" />
                   <div className="absolute left-[27%] top-20 h-28 w-12 -rotate-12 rounded-full border border-cyan-500/20 bg-white/70 dark:bg-slate-100/80" />
                   <div className="absolute right-[27%] top-20 h-28 w-12 rotate-12 rounded-full border border-cyan-500/20 bg-white/70 dark:bg-slate-100/80" />
-                  <div className="absolute left-1/2 top-16 h-20 w-20 -translate-x-1/2 rounded-full border border-cyan-300/50 bg-cyan-100/70" />
-                  <div className="absolute bottom-5 left-5 rounded-md border bg-background/80 px-3 py-2 text-xs shadow-lg">
-                    AI 款式预览
-                  </div>
-                  <div className="absolute right-5 top-5 rounded-full border bg-background/80 px-3 py-1 text-xs text-primary">
-                    UPF 50+
-                  </div>
+                  <div className="absolute bottom-5 left-5 rounded-md border bg-background/80 px-3 py-2 text-xs shadow-lg">AI 款式预览</div>
+                  <div className="absolute right-5 top-5 rounded-full border bg-background/80 px-3 py-1 text-xs text-primary">UPF 50+</div>
                 </div>
               </div>
-
               <div className="rounded-lg border bg-card/75 p-4">
                 <div className="mb-3 text-sm text-muted-foreground">AI 款式推荐卡</div>
                 <div className="space-y-2">
@@ -472,10 +300,6 @@ export function LandingPage() {
                 </div>
               </div>
             </div>
-
-            <div className="rounded-lg border border-cyan-300/20 bg-cyan-300/5 p-4 text-sm leading-6 text-muted-foreground lg:col-span-2">
-              推荐方向：女款城市轻户外防晒夹克，短款微宽松，冰川白与雾感蓝，高领遮阳、背部隐形透气，突出高级冷感科技风。
-            </div>
           </div>
         </motion.div>
       </section>
@@ -486,11 +310,8 @@ export function LandingPage() {
             <Badge className="mb-4 w-fit">Core Capabilities</Badge>
             <h2 className="text-3xl font-semibold md:text-4xl">从趋势判断到设计生成的完整工具矩阵</h2>
           </div>
-          <p className="max-w-xl text-sm leading-6 text-muted-foreground">
-            不只是进入工作台，而是让不同角色都能找到对应的业务动作：分析趋势、生成款式、延展系列、沉淀方案。
-          </p>
+          <p className="max-w-xl text-sm leading-6 text-muted-foreground">不同角色都能找到对应的业务动作：分析趋势、生成款式、延展系列、沉淀方案。</p>
         </div>
-
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {capabilities.map((item) => (
             <div key={item.title} className="glass-panel rounded-lg p-5">
@@ -512,7 +333,6 @@ export function LandingPage() {
             <Link href="/gallery">查看方案库</Link>
           </Button>
         </div>
-
         <div className="grid gap-4 lg:grid-cols-3">
           {cases.map((item) => (
             <div key={item.title} className="glass-panel flex min-h-[320px] flex-col justify-between rounded-lg p-5">
@@ -523,20 +343,13 @@ export function LandingPage() {
                 </div>
                 <h3 className="text-xl font-semibold">{item.title}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{item.style}</p>
-
                 <div className="my-5 flex gap-2">
                   {item.palette.map((color) => (
-                    <span
-                      key={color}
-                      className="h-9 flex-1 rounded-md border"
-                      style={{ backgroundColor: color }}
-                    />
+                    <span key={color} className="h-9 flex-1 rounded-md border" style={{ backgroundColor: color }} />
                   ))}
                 </div>
-
                 <p className="text-sm leading-6 text-muted-foreground">{item.result}</p>
               </div>
-
               <div className="mt-6 flex gap-2">
                 <Button asChild size="sm">
                   <Link href="/trend-workbench">应用此方案</Link>
@@ -550,38 +363,17 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="relative z-10 mx-auto max-w-7xl px-5 pb-20 pt-10">
-        <div className="glass-panel grid gap-6 rounded-xl p-6 lg:grid-cols-[0.9fr_1.1fr]">
-          <div className="flex flex-col justify-between gap-6">
-            <div>
-              <Badge className="mb-4 w-fit">Business Value</Badge>
-              <h2 className="text-3xl font-semibold md:text-4xl">让首页从工具入口变成商业转化入口</h2>
-              <p className="mt-4 text-sm leading-6 text-muted-foreground">
-                StyleForge 保留轻盈、简洁、科技感的品牌气质，同时用案例、角色价值和清晰 CTA 告诉用户它能带来的业务结果。
-              </p>
-            </div>
-            <Button asChild size="lg" className="w-fit">
-              <Link href="/trend-workbench">
-                进入工作台
-                <ArrowRight className="size-4" />
-              </Link>
-            </Button>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-3">
-            {businessValues.map((item) => (
-              <div key={item.role} className="rounded-lg border bg-background/55 p-5">
-                <WandSparkles className="mb-4 size-5 text-primary" />
-                <p className="text-xs text-muted-foreground">{item.role}</p>
-                <h3 className="mt-2 font-semibold">{item.value}</h3>
-                <p className="mt-3 text-sm leading-6 text-muted-foreground">{item.text}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       <AppFooter />
     </main>
+  );
+}
+
+function InfoTile({ icon: Icon, label, value }: { icon: typeof BarChart3; label: string; value: string }) {
+  return (
+    <div className="rounded-lg border bg-card/75 p-4">
+      <Icon className="mb-3 size-5 text-primary" />
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 text-sm font-medium">{value}</p>
+    </div>
   );
 }

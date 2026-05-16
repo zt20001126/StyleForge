@@ -43,7 +43,8 @@ const notificationTheme = {
   success: {
     label: "完成提醒",
     icon: CheckCircle2,
-    panel: "border-emerald-300/35 bg-emerald-300/10 text-emerald-100",
+    panel: "border-emerald-300/30",
+    accent: "bg-emerald-300/80",
     glow: "bg-emerald-300/25 shadow-[0_0_80px_rgba(52,211,153,0.42)]",
     ring: "border-emerald-300/45",
     button: "bg-emerald-300 text-slate-950 hover:bg-emerald-200",
@@ -51,7 +52,8 @@ const notificationTheme = {
   error: {
     label: "异常提醒",
     icon: XCircle,
-    panel: "border-rose-300/35 bg-rose-300/10 text-rose-100",
+    panel: "border-rose-300/30",
+    accent: "bg-rose-300/80",
     glow: "bg-rose-300/25 shadow-[0_0_80px_rgba(251,113,133,0.42)]",
     ring: "border-rose-300/45",
     button: "bg-rose-300 text-slate-950 hover:bg-rose-200",
@@ -59,7 +61,8 @@ const notificationTheme = {
   warning: {
     label: "注意提醒",
     icon: AlertTriangle,
-    panel: "border-amber-300/35 bg-amber-300/10 text-amber-100",
+    panel: "border-amber-300/30",
+    accent: "bg-amber-300/80",
     glow: "bg-amber-300/25 shadow-[0_0_80px_rgba(251,191,36,0.38)]",
     ring: "border-amber-300/45",
     button: "bg-amber-300 text-slate-950 hover:bg-amber-200",
@@ -67,7 +70,8 @@ const notificationTheme = {
   info: {
     label: "任务提醒",
     icon: Info,
-    panel: "border-cyan-300/35 bg-cyan-300/10 text-cyan-100",
+    panel: "border-cyan-300/30",
+    accent: "bg-cyan-300/80",
     glow: "bg-cyan-300/25 shadow-[0_0_80px_rgba(34,211,238,0.42)]",
     ring: "border-cyan-300/45",
     button: "bg-cyan-300 text-slate-950 hover:bg-cyan-200",
@@ -293,7 +297,7 @@ function DreamAssistantNotification({
   return (
     <motion.div
       key={notification.id}
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/35 px-4 backdrop-blur-[2px]"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/25 px-4 backdrop-blur-[2px]"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -310,42 +314,61 @@ function DreamAssistantNotification({
         <div className={cn("pointer-events-none absolute top-24 h-48 w-48 rounded-full blur-3xl", theme.glow)} />
         <motion.div
           className={cn("pointer-events-none absolute top-28 h-40 w-40 rounded-full border", theme.ring)}
-          animate={{ scale: [0.88, 1.22, 0.88], opacity: [0.16, 0.62, 0.16] }}
+          animate={{ scale: [0.88, 1.22, 0.88], opacity: [0.16, 0.58, 0.16] }}
           transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
         />
 
         <motion.div
           className={cn(
-            "relative mb-4 w-full overflow-visible rounded-2xl border bg-card/95 p-5 text-card-foreground shadow-xl shadow-black/15 backdrop-blur-xl ring-1 ring-white/35",
+            "relative mb-4 w-full overflow-visible rounded-xl border bg-background/82 p-4 text-foreground shadow-2xl shadow-black/18 backdrop-blur-xl ring-1 ring-white/18",
             theme.panel,
           )}
           initial={{ opacity: 0, y: 18, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 8, scale: 0.98 }}
           transition={{ delay: 0.12, duration: 0.22 }}
         >
-          <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_16%_0%,rgba(255,255,255,0.42),transparent_38%),radial-gradient(circle_at_90%_20%,rgba(34,211,238,0.14),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.22),transparent_58%)]" />
-            <div className="absolute -right-16 -top-20 h-40 w-40 rounded-full bg-white/15 blur-2xl" />
+          <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl">
+            <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.18),transparent_46%),radial-gradient(circle_at_92%_0%,rgba(34,211,238,0.16),transparent_34%)]" />
+            <div className="absolute -right-16 -top-20 h-40 w-40 rounded-full bg-white/12 blur-2xl" />
           </div>
-          <div className="relative mb-4 flex w-fit items-center gap-2 rounded-full border bg-background/58 px-2.5 py-1 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur">
-            <span className="flex size-6 items-center justify-center rounded-full bg-background/75 text-foreground shadow-sm">
+          <div className={cn("pointer-events-none absolute inset-y-3 left-0 w-1 rounded-r-full", theme.accent)} />
+
+          <div className="relative flex items-start gap-3">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border bg-background/70 shadow-sm backdrop-blur">
               <Icon className="size-4" />
             </span>
-            {theme.label}
+
+            <div className="min-w-0 flex-1">
+              <div className="mb-1 flex items-center justify-between gap-3">
+                <span className="text-xs font-medium text-muted-foreground">{theme.label}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 shrink-0 rounded-full text-muted-foreground hover:text-foreground"
+                  onClick={onDismiss}
+                  aria-label="关闭通知"
+                >
+                  <X className="size-3.5" />
+                </Button>
+              </div>
+
+              <h2 className="text-sm font-semibold leading-5 text-foreground">{notification.title}</h2>
+              <p className="mt-1.5 text-sm leading-5 text-muted-foreground">{notification.message}</p>
+
+              <Button
+                type="button"
+                size="sm"
+                className={cn("mt-3 h-8 rounded-full px-4 text-xs shadow-sm", theme.button)}
+                onClick={onDismiss}
+              >
+                {notification.actionText ?? "我知道了"}
+              </Button>
+            </div>
           </div>
-          <h2 className="relative text-2xl font-semibold tracking-normal text-foreground drop-shadow-sm">
-            {notification.title}
-          </h2>
-          <p className="relative mt-2 text-sm leading-6 text-muted-foreground">{notification.message}</p>
-          <Button
-            type="button"
-            size="sm"
-            className={cn("relative mt-5 rounded-full px-5 shadow-lg shadow-black/10", theme.button)}
-            onClick={onDismiss}
-          >
-            {notification.actionText ?? "我知道了"}
-          </Button>
-          <span className="pointer-events-none absolute -bottom-2 left-1/2 size-4 -translate-x-1/2 rotate-45 border-b border-r bg-card/95" />
+
+          <span className="pointer-events-none absolute -bottom-1.5 left-1/2 size-3 -translate-x-1/2 rotate-45 border-b border-r bg-background/82" />
         </motion.div>
 
         <motion.div

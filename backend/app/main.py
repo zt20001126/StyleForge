@@ -7,7 +7,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.routes import design_plans_router, trend_analyses_router
+from app.api.routes import auth_router, design_plans_router, trend_analyses_router
 from app.core.config import get_settings
 from app.core.errors import AppError
 from app.core.logging import setup_logging
@@ -32,6 +32,7 @@ app.add_middleware(
 
 app.include_router(trend_analyses_router)
 app.include_router(design_plans_router)
+app.include_router(auth_router)
 
 
 @app.middleware("http")

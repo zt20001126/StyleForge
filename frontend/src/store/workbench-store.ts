@@ -1,7 +1,6 @@
 "use client";
 
 import { create } from "zustand";
-import { toast } from "sonner";
 import { createTrendAnalysis, saveDesignPlan } from "@/lib/api/trend";
 import { showDreamAssistantNotification } from "@/store/assistant-notification-store";
 import type {
@@ -143,7 +142,6 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => {
           actionText: "我去补充",
           returnText: "补齐信息后再叫我，我继续待命～",
         });
-        toast.error("请完整填写分析输入");
         return;
       }
 
@@ -157,7 +155,6 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => {
         actionText: "知道了",
         returnText: "我先回右下角，生成完再来提醒你～",
       });
-      toast.info("趋势分析已开始");
       try {
         const analysis = await createTrendAnalysis(input, nextAbortController.signal);
         const selection = buildDefaultSelection(analysis);
@@ -175,7 +172,6 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => {
           actionText: "我知道了",
           returnText: "任务提醒完成，我继续待命～",
         });
-        toast.success("趋势分析已生成");
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
           set({ loading: false, error: null, abortController: null });
@@ -189,7 +185,6 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => {
           actionText: "稍后再试",
           returnText: "我先回右下角，需要时再叫我～",
         });
-        toast.error("趋势分析失败");
       }
     },
     cancelAnalysis: () => {
@@ -204,7 +199,6 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => {
         actionText: "我知道了",
         returnText: "我先回右下角，需要灵感随时叫我！",
       });
-      toast.info("已取消生成");
     },
     toggleSelection: (key, id, max = 4) => {
       const { analysis, selection } = get();
@@ -228,20 +222,17 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => {
         selected_selling_point_ids: direction.selling_point_ids,
       };
       set({ selection, myDesignPlan: buildPlan(analysis, selection) });
-      toast.success(`已应用：${direction.name}`);
     },
     saveCurrentPlan: async () => {
       const plan = get().myDesignPlan;
       if (!plan) return;
       await saveDesignPlan({ ...plan, is_favorite: true });
       set({ myDesignPlan: { ...plan, is_favorite: true } });
-      toast.success("方案已收藏");
     },
     exportJson: () => {
       const plan = get().myDesignPlan;
       if (!plan) return;
       downloadFile("styleforge-design-plan.json", JSON.stringify(plan, null, 2), "application/json");
-      toast.success("JSON 已导出");
     },
     exportMarkdown: () => {
       const plan = get().myDesignPlan;
@@ -251,7 +242,6 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => {
         `# ${plan.recommended_direction}\n\n${plan.design_summary}\n\n爆款指数：${plan.popularity_score}\n\n## AI Prompt\n\n${plan.ai_prompt}\n`,
         "text/markdown",
       );
-      toast.success("趋势报告已导出");
     },
   };
 });

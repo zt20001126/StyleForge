@@ -588,7 +588,7 @@ Configuration priority:
 
 Backend-only secrets:
 
-- `OPENAI_API_KEY`, `ARK_API_KEY`, `DASHSCOPE_API_KEY`
+- `OPENAI_API_KEY`, `ARK_API_KEY`, `DASHSCOPE_API_KEY`, `ANTHROPIC_AUTH_TOKEN`
 - `DATABASE_URL`, `REDIS_URL`
 - `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`
 - `OSS_ACCESS_KEY_ID`, `OSS_ACCESS_KEY_SECRET`
@@ -600,4 +600,27 @@ Frontend-safe variables:
 
 Never add provider API keys, database URLs, Redis URLs, MinIO secrets, or OSS secrets to frontend environment variables. Every `NEXT_PUBLIC_*` variable is visible in the browser bundle.
 
-For real model calls, set `USE_MOCK_AI=false` and choose `AI_PROVIDER=openai`, `AI_PROVIDER=ark`, or `AI_PROVIDER=dashscope`. The backend then selects the provider-specific base URL, model, and API key through the central settings object.
+For real model calls, set `USE_MOCK_AI=false` and choose `AI_PROVIDER=openai`, `AI_PROVIDER=ark`, `AI_PROVIDER=dashscope`, or `AI_PROVIDER=anthropic`. The backend then selects the provider-specific base URL, model, and API key through the central settings object.
+
+DeepSeek can be configured in two ways:
+
+```env
+# DeepSeek Anthropic-compatible messages API
+USE_MOCK_AI=false
+AI_PROVIDER=anthropic
+ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic
+ANTHROPIC_AUTH_TOKEN=your_deepseek_api_key
+ANTHROPIC_MODEL=deepseek-v4-pro
+ANTHROPIC_DEFAULT_HAIKU_MODEL=deepseek-v4-flash
+ANTHROPIC_DEFAULT_SONNET_MODEL=deepseek-v4-pro
+ANTHROPIC_DEFAULT_OPUS_MODEL=deepseek-v4-pro
+```
+
+```env
+# DeepSeek OpenAI-compatible chat completions API
+USE_MOCK_AI=false
+AI_PROVIDER=openai-compatible
+OPENAI_API_KEY=your_deepseek_api_key
+OPENAI_BASE_URL=https://api.deepseek.com
+OPENAI_MODEL=deepseek-chat
+```

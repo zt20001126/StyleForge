@@ -22,11 +22,15 @@ from sqlalchemy import (
     insert,
     select,
     text,
+    update,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.engine import Engine, RowMapping
+from sqlalchemy.exc import IntegrityError
 
+from app.core.errors import AppError
 from app.core.errors import NotFoundError
+from app.schemas.auth import UserPublic
 from app.schemas.trend import (
     DesignPlanCreate,
     DesignPlanCreateResponse,
@@ -123,6 +127,48 @@ generated_assets = Table(
     Column("is_favorite", Boolean, nullable=False, server_default=text("false")),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     CheckConstraint("asset_type IN ('image', 'video', 'document')", name="ck_generated_assets_type"),
+)
+
+users = Table(
+    "users",
+    metadata,
+    Column("id", UUID(as_uuid=False), primary_key=True, server_default=func.gen_random_uuid()),
+    Column("phone", String(20), nullable=False),
+    Column("password_hash", String(255), nullable=False),
+    Column("username", String(50), nullable=False),
+    Column("avatar_url", String(255), nullable=False),
+    Column("role", String(30), nullable=False, server_default=text("'designer'")),
+    Column("status", String(20), nullable=False, server_default=text("'active'")),
+    Column("last_login_at", DateTime(timezone=True)),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("updated_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    CheckConstraint("phone ~ '^1[3-9][0-9]{9}$'", name="ck_users_phone"),
+    CheckConstraint("status IN ('active', 'disabled')", name="ck_users_status"),
+)
+
+sms_codes = Table(
+    "sms_codes",
+    metadata,
+    Column("id", UUID(as_uuid=False), primary_key=True, server_default=func.gen_random_uuid()),
+    Column("phone", String(20), nullable=False),
+    Column("code_hash", String(255), nullable=False),
+    Column("purpose", String(20), nullable=False),
+    Column("expires_at", DateTime(timezone=True), nullable=False),
+    Column("used_at", DateTime(timezone=True)),
+    Column("attempt_count", Integer, nullable=False, server_default=text("0")),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    CheckConstraint("purpose IN ('login', 'register')", name="ck_sms_codes_purpose"),
+)
+
+auth_sessions = Table(
+    "auth_sessions",
+    metadata,
+    Column("id", UUID(as_uuid=False), primary_key=True, server_default=func.gen_random_uuid()),
+    Column("user_id", UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+    Column("refresh_token_hash", String(255), nullable=False),
+    Column("expires_at", DateTime(timezone=True), nullable=False),
+    Column("revoked_at", DateTime(timezone=True)),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
 )
 
 
@@ -259,10 +305,93 @@ class PostgresRepository:
 
     def clear(self) -> None:
         with self.engine.begin() as connection:
+            connection.execute(delete(auth_sessions))
+            connection.execute(delete(sms_codes))
+            connection.execute(delete(users))
             connection.execute(delete(generated_assets))
             connection.execute(delete(generation_tasks))
             connection.execute(delete(design_plans))
             connection.execute(delete(trend_analyses))
+
+    def create_user(self, phone: str, password_hash: str, username: str, avatar_url: str) -> UserPublic:
+        statement = (
+            insert(users)
+            .values(phone=phone, password_hash=password_hash, username=username, avatar_url=avatar_url)
+            .returning(users)
+        )
+        try:
+            with self.engine.begin() as connection:
+                row = connection.execute(statement).mappings().one()
+        except IntegrityError as exc:
+            raise AppError("PHONE_ALREADY_REGISTERED", "Phone number is already registered", 409) from exc
+        return _user_public_from_row(row)
+
+    def get_user_by_phone(self, phone: str) -> RowMapping | None:
+        statement = select(users).where(users.c.phone == phone)
+        with self.engine.begin() as connection:
+            return connection.execute(statement).mappings().one_or_none()
+
+    def get_user_by_id(self, user_id: str) -> RowMapping | None:
+        if not _is_uuid(user_id):
+            return None
+        statement = select(users).where(users.c.id == user_id)
+        with self.engine.begin() as connection:
+            return connection.execute(statement).mappings().one_or_none()
+
+    def update_user_last_login(self, user_id: str) -> UserPublic:
+        statement = (
+            update(users)
+            .where(users.c.id == user_id)
+            .values(last_login_at=func.now(), updated_at=func.now())
+            .returning(users)
+        )
+        with self.engine.begin() as connection:
+            row = connection.execute(statement).mappings().one()
+        return _user_public_from_row(row)
+
+    def create_sms_code(self, phone: str, purpose: str, code_hash: str, expires_at: datetime) -> None:
+        statement = insert(sms_codes).values(phone=phone, purpose=purpose, code_hash=code_hash, expires_at=expires_at)
+        with self.engine.begin() as connection:
+            connection.execute(statement)
+
+    def get_latest_sms_code(self, phone: str, purpose: str) -> RowMapping | None:
+        statement = (
+            select(sms_codes)
+            .where(sms_codes.c.phone == phone, sms_codes.c.purpose == purpose, sms_codes.c.used_at.is_(None))
+            .order_by(desc(sms_codes.c.created_at))
+            .limit(1)
+        )
+        with self.engine.begin() as connection:
+            return connection.execute(statement).mappings().one_or_none()
+
+    def count_recent_sms_codes(self, phone: str, since: datetime) -> int:
+        statement = select(func.count()).select_from(sms_codes).where(sms_codes.c.phone == phone, sms_codes.c.created_at >= since)
+        with self.engine.begin() as connection:
+            return connection.execute(statement).scalar_one()
+
+    def increment_sms_attempt(self, code_id: str) -> None:
+        statement = update(sms_codes).where(sms_codes.c.id == code_id).values(attempt_count=sms_codes.c.attempt_count + 1)
+        with self.engine.begin() as connection:
+            connection.execute(statement)
+
+    def mark_sms_code_used(self, code_id: str) -> None:
+        statement = update(sms_codes).where(sms_codes.c.id == code_id).values(used_at=func.now())
+        with self.engine.begin() as connection:
+            connection.execute(statement)
+
+    def create_auth_session(self, user_id: str, refresh_token_hash: str, expires_at: datetime) -> None:
+        statement = insert(auth_sessions).values(user_id=user_id, refresh_token_hash=refresh_token_hash, expires_at=expires_at)
+        with self.engine.begin() as connection:
+            connection.execute(statement)
+
+    def revoke_auth_session(self, refresh_token_hash: str) -> None:
+        statement = (
+            update(auth_sessions)
+            .where(auth_sessions.c.refresh_token_hash == refresh_token_hash, auth_sessions.c.revoked_at.is_(None))
+            .values(revoked_at=func.now())
+        )
+        with self.engine.begin() as connection:
+            connection.execute(statement)
 
 
 def _trend_analysis_from_row(row: RowMapping) -> TrendAnalysisDetail:
@@ -298,6 +427,19 @@ def _design_plan_from_row(row: RowMapping) -> DesignPlanDetail:
         is_favorite=row["is_favorite"],
         created_at=_as_datetime(row["created_at"]),
         updated_at=_as_datetime(row["updated_at"]),
+    )
+
+
+def _user_public_from_row(row: RowMapping) -> UserPublic:
+    return UserPublic(
+        id=str(row["id"]),
+        phone=row["phone"],
+        username=row["username"],
+        avatar_url=row["avatar_url"],
+        role=row["role"],
+        status=row["status"],
+        created_at=_as_datetime(row["created_at"]),
+        last_login_at=row["last_login_at"],
     )
 
 

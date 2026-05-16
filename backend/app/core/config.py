@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     cors_allow_origins: str | None = None
     database_url: str | None = None
     redis_url: str | None = None
+    jwt_secret_key: str = "styleforge-dev-secret-change-me"
+    access_token_expire_minutes: int = Field(default=30, ge=1, le=1440)
+    refresh_token_expire_days: int = Field(default=14, ge=1, le=90)
+    sms_code_expire_minutes: int = Field(default=5, ge=1, le=30)
+    auth_mock_sms_enabled: bool = True
+    auth_sms_pepper: str = "styleforge-dev-sms-pepper"
 
     ai_provider: str = "mock"
     default_text_model_provider: str = "openai"
@@ -49,6 +55,12 @@ class Settings(BaseSettings):
     dashscope_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
     dashscope_text_model: str | None = None
     dashscope_image_model: str | None = None
+    anthropic_base_url: str = "https://api.anthropic.com/v1"
+    anthropic_auth_token: str | None = None
+    anthropic_model: str | None = None
+    anthropic_default_haiku_model: str | None = None
+    anthropic_default_sonnet_model: str | None = None
+    anthropic_default_opus_model: str | None = None
 
     object_storage_provider: str = "local"
     minio_endpoint: str | None = None
@@ -109,6 +121,21 @@ class Settings(BaseSettings):
                 api_key=self.dashscope_api_key,
                 base_url=self.dashscope_base_url,
                 model=model or self.dashscope_text_model or self.dashscope_image_model or "",
+                timeout_seconds=self.ai_timeout_seconds,
+            )
+        if selected_provider in {"anthropic", "claude", "deepseek-anthropic"}:
+            return AIProviderConfig(
+                provider="anthropic",
+                api_key=self.anthropic_auth_token,
+                base_url=self.anthropic_base_url,
+                model=(
+                    model
+                    or self.anthropic_model
+                    or self.anthropic_default_sonnet_model
+                    or self.anthropic_default_opus_model
+                    or self.anthropic_default_haiku_model
+                    or ""
+                ),
                 timeout_seconds=self.ai_timeout_seconds,
             )
         return AIProviderConfig(

@@ -11,6 +11,7 @@ from app.core.config import Settings
 from app.core.errors import AICallFailedError
 from app.main import app
 from app.repositories import repository
+from app.services import ai_client
 from app.services.ai_client import call_chat_completion
 
 
@@ -119,6 +120,24 @@ def test_settings_build_dashscope_provider_config(monkeypatch) -> None:
     assert provider.model == "qwen-test"
 
 
+def test_settings_build_anthropic_provider_config(monkeypatch) -> None:
+    monkeypatch.setenv("AI_PROVIDER", "anthropic")
+    monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", "deepseek-key")
+    monkeypatch.setenv("ANTHROPIC_BASE_URL", "https://api.deepseek.com/anthropic")
+    monkeypatch.setenv("ANTHROPIC_MODEL", "deepseek-v4-pro")
+    monkeypatch.setenv("ANTHROPIC_DEFAULT_HAIKU_MODEL", "deepseek-v4-flash")
+    monkeypatch.setenv("ANTHROPIC_DEFAULT_SONNET_MODEL", "deepseek-v4-pro")
+    monkeypatch.setenv("ANTHROPIC_DEFAULT_OPUS_MODEL", "deepseek-v4-pro")
+
+    settings = Settings(_env_file=None)
+    provider = settings.get_ai_provider_config()
+
+    assert provider.provider == "anthropic"
+    assert provider.api_key == "deepseek-key"
+    assert provider.base_url == "https://api.deepseek.com/anthropic"
+    assert provider.model == "deepseek-v4-pro"
+
+
 def test_settings_build_object_storage_config(monkeypatch) -> None:
     monkeypatch.setenv("OBJECT_STORAGE_PROVIDER", "minio")
     monkeypatch.setenv("MINIO_ENDPOINT", "http://localhost:9000")
@@ -155,6 +174,72 @@ def test_real_ai_requires_api_key(monkeypatch) -> None:
         assert "OPENAI_API_KEY or AI_API_KEY" in exc.message
     else:
         raise AssertionError("call_chat_completion should require an API key")
+
+
+def test_anthropic_provider_requires_api_key() -> None:
+    settings = Settings(
+        _env_file=None,
+        ai_provider="anthropic",
+        anthropic_auth_token=None,
+        anthropic_base_url="https://api.deepseek.com/anthropic",
+        anthropic_model="deepseek-v4-pro",
+    )
+
+    try:
+        call_chat_completion("prompt", settings)
+    except AICallFailedError as exc:
+        assert exc.code == "AI_CALL_FAILED"
+        assert "ANTHROPIC_AUTH_TOKEN" in exc.message
+    else:
+        raise AssertionError("call_chat_completion should require ANTHROPIC_AUTH_TOKEN")
+
+
+def test_call_anthropic_messages_parses_text_response(monkeypatch) -> None:
+    captured: dict = {}
+
+    class FakeResponse:
+        status_code = 200
+
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            return {"content": [{"type": "text", "text": "{\"summary\":\"ok\"}"}]}
+
+    class FakeClient:
+        def __init__(self, timeout: int, trust_env: bool) -> None:
+            captured["timeout"] = timeout
+            captured["trust_env"] = trust_env
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, traceback) -> None:
+            return None
+
+        def post(self, url: str, json: dict, headers: dict) -> FakeResponse:
+            captured["url"] = url
+            captured["json"] = json
+            captured["headers"] = headers
+            return FakeResponse()
+
+    monkeypatch.setattr(ai_client.httpx, "Client", FakeClient)
+    settings = Settings(
+        _env_file=None,
+        ai_provider="anthropic",
+        anthropic_auth_token="deepseek-key",
+        anthropic_base_url="https://api.deepseek.com/anthropic",
+        anthropic_model="deepseek-v4-pro",
+    )
+
+    content = call_chat_completion("trend prompt", settings)
+
+    assert content == "{\"summary\":\"ok\"}"
+    assert captured["url"] == "https://api.deepseek.com/anthropic/messages"
+    assert captured["headers"]["x-api-key"] == "deepseek-key"
+    assert captured["headers"]["anthropic-version"] == "2023-06-01"
+    assert captured["json"]["model"] == "deepseek-v4-pro"
+    assert captured["json"]["messages"] == [{"role": "user", "content": "trend prompt"}]
 
 
 def test_create_trend_analysis_with_mock_ai() -> None:

@@ -20,6 +20,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { logoutWithRefreshToken } from "@/lib/api/auth";
 import {
   clearStoredAuthSession,
   getUserInitials,
@@ -100,7 +101,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  function handleLogout() {
+  async function handleLogout() {
+    if (authSession?.refreshToken) {
+      try {
+        await logoutWithRefreshToken(authSession.refreshToken);
+      } catch {
+        // Local logout should still complete if the session is already expired.
+      }
+    }
     clearStoredAuthSession();
     setAuthSession(null);
     setIsUserMenuOpen(false);

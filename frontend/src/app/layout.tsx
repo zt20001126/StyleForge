@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Toaster } from "sonner";
 import { FloatingChatAssistant } from "@/components/chat/floating-chat-assistant";
 import { Providers } from "@/components/providers";
 import "./globals.css";
@@ -20,7 +19,6 @@ export default function RootLayout({
         <Providers>
           {children}
           <FloatingChatAssistant />
-          <Toaster richColors position="top-right" />
         </Providers>
       </body>
     </html>
